@@ -15,7 +15,12 @@ export function createLock({ onLost, dev = false }) {
   addEventListener('blur', () => touches.clear());
   addEventListener('keydown', (e) => { if (locked) e.preventDefault(); });
   addEventListener('contextmenu', (e) => e.preventDefault());
-  addEventListener('popstate', () => { if (locked) history.pushState({ baby: 1 }, ''); }); // back button stays here
+  // Back trap. On touch devices it is ALWAYS on: iPhone users lock with Guided Access (no padlock), and Safari's
+  // left-edge swipe = browser back, which Guided Access allows. Browsers skip entries pushed without a gesture -> push on touch.
+  const trapAlways = matchMedia('(pointer: coarse)').matches;
+  const trap = () => { if (!history.state?.baby) history.pushState({ baby: 1 }, ''); };
+  addEventListener('popstate', () => { if (locked || trapAlways) trap(); }); // back button / edge swipe stays here
+  if (trapAlways) addEventListener('touchend', trap, { capture: true, passive: true });
   addEventListener('beforeunload', (e) => { if (locked && !native) { e.preventDefault(); e.returnValue = ''; } });
   document.addEventListener('gesturestart', (e) => e.preventDefault()); // iOS pinch zoom
   document.addEventListener('fullscreenchange', () => { if (locked && !native && !document.fullscreenElement) onLost(); });
