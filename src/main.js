@@ -4,7 +4,6 @@
 import { createAudio } from './audio.js';
 import { createLock } from './lock.js';
 import { makeScenes } from './scenes.js';
-import { shuffle } from './fx.js';
 
 const q = new URLSearchParams(location.search);
 const SESSION_SEC = (+q.get('min') || 10) * 60, SCENE_SEC = +q.get('scene') || 60, DEV = q.has('dev');
@@ -13,10 +12,21 @@ const $ = (id) => document.getElementById(id);
 const cv = $('c'), ctx = cv.getContext('2d');
 const audio = createAudio();
 const scenes = makeScenes(audio);
-// Games come in a shuffled order; every game is played once before any repeats (10 min = 10 games of 60 s).
-let order = shuffle([...scenes.play]);
-if (q.get('game')) { const g = order.find((s) => s.name === q.get('game')); if (g) order = [g, ...order.filter((s) => s !== g)]; }
-let W = 1, H = 1, cur = order[0], idx = 0, sceneT = 0, sessionT = 0, fade = 0;
+// Game rotation is remembered ACROSS visits (localStorage): a game comes back only after every game has been played once.
+const SEEN_KEY = 'baby.seen';
+let seen = new Set(); try { seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')); } catch { /* private mode */ }
+function markSeen(s) {
+  if (!scenes.play.includes(s)) return;
+  seen.add(s.name); if (seen.size >= scenes.play.length) seen = new Set([s.name]); // full round done -> all eligible again (except this one)
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify([...seen])); } catch { /* */ }
+}
+function pickNext(prev) {
+  let pool = scenes.play.filter((s) => !seen.has(s.name) && s !== prev);
+  if (!pool.length) pool = scenes.play.filter((s) => s !== prev);
+  return pool[Math.random() * pool.length | 0];
+}
+const first = scenes.play.find((s) => s.name === q.get('game')) || pickNext(null);
+let W = 1, H = 1, cur = first, sceneT = 0, sessionT = 0, fade = 0;
 let mode = 'open'; // open (padlock shown, unlocked) | locked (padlock hidden) | reveal (locked, padlock shown) | lost (fullscreen dropped)
 let revealT = 0, devHeld = false, pinCheck = 0;
 
@@ -57,12 +67,9 @@ function resize() {
 }
 addEventListener('resize', resize); resize();
 
-function setScene(s) { cur = s; cur.enter(); sceneT = 0; fade = 1; audio.whoosh(); }
-setScene(order[0]);
-function nextGame() {
-  if (++idx >= order.length) { const prev = cur; order = shuffle([...scenes.play]); if (order[0] === prev) order.push(order.shift()); idx = 0; }
-  setScene(order[idx]);
-}
+function setScene(s) { markSeen(s); cur = s; cur.enter(); sceneT = 0; fade = 1; audio.whoosh(); }
+setScene(first);
+function nextGame() { setScene(pickNext(cur)); }
 
 const playing = () => mode !== 'lost';
 const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
