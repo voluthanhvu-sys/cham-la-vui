@@ -5,8 +5,12 @@ export function createAudio() {
   let ac = null, master = null, noiseBuf = null, viVoice = null;
 
   function init() {
-    if (ac) { ac.resume(); return; }
+    // iPhone: WebAudio is muted by the silent switch unless the session is "playback" (iOS 17+).
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* older iOS */ }
+    if (ac) { if (ac.state !== 'running') ac.resume(); return; }
     ac = new (window.AudioContext || window.webkitAudioContext)();
+    // iOS only unlocks audio inside a real gesture (touchend/click): play one silent sample right now.
+    try { const b = ac.createBufferSource(); b.buffer = ac.createBuffer(1, 1, 22050); b.connect(ac.destination); b.start(0); } catch { /* */ }
     master = ac.createGain(); master.gain.value = 0.6; master.connect(ac.destination);
     noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);

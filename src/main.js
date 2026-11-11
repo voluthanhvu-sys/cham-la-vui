@@ -59,6 +59,8 @@ setScene(scenes.play[0]);
 const playing = () => mode !== 'lost';
 const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!playing()) return; audio.init(); cur.tap(...pos(e)); });
+// iOS counts touchend/click as a user gesture for audio, not pointerdown -> also unlock audio there.
+for (const ev of ['touchend', 'click']) addEventListener(ev, () => audio.init(), { capture: true, passive: true });
 cv.addEventListener('pointermove', (e) => { if (playing() && e.buttons) cur.drag(...pos(e)); });
 
 const ARC = 276.5;
@@ -79,7 +81,7 @@ function frame(now) {
   if (p > 0.1) $('ringArc').setAttribute('stroke-dashoffset', String(ARC * (1 - p)));
   if (mode === 'reveal' && (revealT -= dt) <= 0) setMode('locked');
   // Android shell: pinning refused or ended by the system unpin gesture -> back to the open padlock.
-  if (lock.native && lock.locked && (pinCheck += dt) > 2) { pinCheck = 1; if (!lock.pinned()) { lock.unlock(); setMode('open'); } }
+  if (lock.native && lock.locked && (pinCheck += dt) > 2) { pinCheck = 1; if (!lock.pinned() && !lock.guarded()) { lock.unlock(); setMode('open'); } }
   if (!lock.locked) pinCheck = 0;
 
   cur.update(dt);

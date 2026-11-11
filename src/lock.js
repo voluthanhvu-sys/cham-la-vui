@@ -37,6 +37,8 @@ export function createLock({ onLost, dev = false }) {
     get locked() { return locked; },
     // Native shell only: is the screen still pinned? (a parent can unpin with the system gesture)
     pinned() { return native?.isPinned ? native.isPinned() : true; },
+    // Native shell guard: while locked it brings itself back after an unpin, so an unpin does NOT mean "parent unlocked".
+    guarded() { return native?.isGuarded ? native.isGuarded() : false; },
     // Progress 0..1 of the parent gesture; returns true once when it completes. ?dev: Shift key counts as 5 fingers.
     holdStep(dt, devHeld = false) {
       const n = touches.size;
