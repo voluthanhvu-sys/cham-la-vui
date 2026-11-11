@@ -15,17 +15,23 @@ const scenes = makeScenes(audio);
 // Game rotation is remembered ACROSS visits (localStorage): a game comes back only after every game has been played once.
 const SEEN_KEY = 'baby.seen';
 let seen = new Set(); try { seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')); } catch { /* private mode */ }
+// scenes.play = [{name, make}] (100 entries); a scene object is built the first time it is played.
+const NAMES = new Set(scenes.play.map((e) => e.name));
+seen = new Set([...seen].filter((n) => NAMES.has(n))); // drop names of games that no longer exist
+const built = new Map();
+function build(e) { let s = built.get(e.name); if (!s) { s = e.make(); s.name = e.name; built.set(e.name, s); } return s; }
 function markSeen(s) {
-  if (!scenes.play.includes(s)) return;
-  seen.add(s.name); if (seen.size >= scenes.play.length) seen = new Set([s.name]); // full round done -> all eligible again (except this one)
+  if (!NAMES.has(s.name)) return;
+  seen.add(s.name); if (seen.size >= NAMES.size) seen = new Set([s.name]); // full round done -> all eligible again (except this one)
   try { localStorage.setItem(SEEN_KEY, JSON.stringify([...seen])); } catch { /* */ }
 }
 function pickNext(prev) {
-  let pool = scenes.play.filter((s) => !seen.has(s.name) && s !== prev);
-  if (!pool.length) pool = scenes.play.filter((s) => s !== prev);
-  return pool[Math.random() * pool.length | 0];
+  let pool = scenes.play.filter((e) => !seen.has(e.name) && e.name !== prev?.name);
+  if (!pool.length) pool = scenes.play.filter((e) => e.name !== prev?.name);
+  return build(pool[Math.random() * pool.length | 0]);
 }
-const first = scenes.play.find((s) => s.name === q.get('game')) || pickNext(null);
+const want = q.get('game'), wantE = want && (scenes.play.find((e) => e.name === want) || scenes.play.find((e) => e.name.startsWith(want + '.')));
+const first = wantE ? build(wantE) : pickNext(null);
 let W = 1, H = 1, cur = first, sceneT = 0, sessionT = 0, fade = 0;
 let mode = 'open'; // open (padlock shown, unlocked) | locked (padlock hidden) | reveal (locked, padlock shown) | lost (fullscreen dropped)
 let revealT = 0, devHeld = false, pinCheck = 0;
@@ -63,11 +69,11 @@ function resize() {
   W = innerWidth; H = innerHeight;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  for (const s of [...scenes.play, scenes.sleep]) s.resize(W, H);
+  cur.resize(W, H); if (cur !== scenes.sleep) scenes.sleep.resize(W, H);
 }
 addEventListener('resize', resize); resize();
 
-function setScene(s) { markSeen(s); cur = s; cur.enter(); sceneT = 0; fade = 1; audio.whoosh(); }
+function setScene(s) { markSeen(s); cur = s; cur.resize(W, H); cur.enter(); sceneT = 0; fade = 1; audio.whoosh(); }
 setScene(first);
 function nextGame() { setScene(pickNext(cur)); }
 

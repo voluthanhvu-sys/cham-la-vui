@@ -176,3 +176,58 @@ export function drawBush(ctx, x, y, s) {
   ctx.fillStyle = '#58c26a'; for (const [dx, dy, r] of blobs) circle(ctx, x + dx * s, y + dy * s, r * s * 0.92);
   ctx.fillStyle = '#ff6b8b'; for (const [dx, dy] of [[-0.5, -0.3], [0.45, -0.1], [0.05, 0.25]]) circle(ctx, x + dx * s, y + dy * s, s * 0.08);
 }
+
+// Covers an animal hides behind (same footprint as drawBush: about x±1.3s, y-1.05s..y+0.9s).
+const BLOBS = [[-0.75, 0.15, 0.55], [0.75, 0.15, 0.55], [-0.4, -0.25, 0.6], [0.4, -0.25, 0.6], [0, -0.45, 0.62], [0, 0.2, 0.7]];
+function blobs(ctx, x, y, s, dark, light) {
+  ctx.fillStyle = dark; for (const [dx, dy, r] of BLOBS) circle(ctx, x + dx * s, y + dy * s + s * 0.06, r * s);
+  ctx.fillStyle = light; for (const [dx, dy, r] of BLOBS) circle(ctx, x + dx * s, y + dy * s, r * s * 0.92);
+}
+export function drawCover(ctx, type, x, y, s, c = '#ff6b8b') {
+  if (type === 'bush') return drawBush(ctx, x, y, s);
+  if (type === 'snow') { blobs(ctx, x, y, s, '#c9d8ec', '#ffffff'); ctx.fillStyle = 'rgba(180,210,240,.6)'; circle(ctx, x - s * 0.3, y - s * 0.4, s * 0.12); return; }
+  if (type === 'cloud') {
+    blobs(ctx, x, y, s, '#d5e3f5', '#ffffff');
+    ctx.fillStyle = '#ffb3c8'; circle(ctx, x - s * 0.45, y + s * 0.1, s * 0.12); circle(ctx, x + s * 0.45, y + s * 0.1, s * 0.12);
+    ctx.fillStyle = '#5a6a8a'; circle(ctx, x - s * 0.25, y - s * 0.08, s * 0.07); circle(ctx, x + s * 0.25, y - s * 0.08, s * 0.07);
+    return;
+  }
+  if (type === 'box') {
+    const w = s * 1.15, top = y - s * 0.7, bot = y + s * 0.9;
+    ctx.fillStyle = c; ctx.fillRect(x - w, top, w * 2, bot - top);
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(x - w, top, w * 2, s * 0.12);
+    ctx.fillStyle = '#fff3b0'; ctx.fillRect(x - s * 0.15, top, s * 0.3, bot - top);
+    ctx.fillStyle = c; ctx.fillRect(x - w * 1.08, top - s * 0.3, w * 2.16, s * 0.34); // lid
+    ctx.fillStyle = '#fff3b0'; ctx.fillRect(x - s * 0.15, top - s * 0.3, s * 0.3, s * 0.34);
+    ellipse(ctx, x - s * 0.32, top - s * 0.42, s * 0.3, s * 0.16, 0.4); ellipse(ctx, x + s * 0.32, top - s * 0.42, s * 0.3, s * 0.16, -0.4);
+    return;
+  }
+  if (type === 'pot') {
+    ctx.fillStyle = '#3f9e4d'; for (const k of [-1, 1]) ellipse(ctx, x + k * s * 0.9, y - s * 0.75, s * 0.4, s * 0.18, k * 0.5);
+    ctx.fillStyle = c; ctx.beginPath();
+    ctx.moveTo(x - s * 1.1, y - s * 0.55); ctx.lineTo(x + s * 1.1, y - s * 0.55); ctx.lineTo(x + s * 0.8, y + s * 0.9); ctx.lineTo(x - s * 0.8, y + s * 0.9); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(x - s * 1.25, y - s * 0.75, s * 2.5, s * 0.3);
+    ctx.fillStyle = c; ctx.fillRect(x - s * 1.25, y - s * 0.8, s * 2.5, s * 0.28);
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; for (const k of [-1, 0, 1]) circle(ctx, x + k * s * 0.45, y + s * 0.2, s * 0.1);
+  }
+}
+
+export function drawHeart(ctx, x, y, r) {
+  ctx.beginPath(); ctx.moveTo(x, y + r * 0.9);
+  ctx.bezierCurveTo(x - r * 1.5, y - r * 0.1, x - r * 0.7, y - r * 1.2, x, y - r * 0.45);
+  ctx.bezierCurveTo(x + r * 0.7, y - r * 1.2, x + r * 1.5, y - r * 0.1, x, y + r * 0.9); ctx.fill();
+}
+export function drawLeaf(ctx, x, y, r, rot = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.beginPath(); ctx.moveTo(0, -r); ctx.quadraticCurveTo(r * 0.8, 0, 0, r); ctx.quadraticCurveTo(-r * 0.8, 0, 0, -r); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = r * 0.06; ctx.beginPath(); ctx.moveTo(0, -r * 0.8); ctx.lineTo(0, r * 1.2); ctx.stroke();
+  ctx.restore();
+}
+export function drawFlake(ctx, x, y, r, rot = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.lineCap = 'round'; ctx.lineWidth = r * 0.12;
+  for (let i = 0; i < 6; i++) {
+    ctx.rotate(TAU / 6); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -r);
+    ctx.moveTo(0, -r * 0.55); ctx.lineTo(-r * 0.25, -r * 0.75); ctx.moveTo(0, -r * 0.55); ctx.lineTo(r * 0.25, -r * 0.75); ctx.stroke();
+  }
+  ctx.restore();
+}

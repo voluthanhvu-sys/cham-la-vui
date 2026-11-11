@@ -395,5 +395,7 @@ function houseScene(audio) {
 }
 
 export function moreScenes(audio) {
-  return [xyloScene(audio), fireworkScene(audio), fishScene(audio), trainScene(audio), shapeScene(audio), fruitScene(audio), paintScene(audio), houseScene(audio)];
+  const one = (name, f) => ({ name, make: () => f(audio) }); // variants of these come in B2
+  return [one('xylo.wood', xyloScene), one('fireworks.city', fireworkScene), one('fish.sea', fishScene), one('train.train', trainScene),
+    one('shapes.rainbow', shapeScene), one('fruit.tree', fruitScene), one('paint.rainbow', paintScene), one('house.house', houseScene)];
 }

@@ -28,6 +28,18 @@ export function makeBag(items) {
 
 // ONE animal bag shared by every game: the child sees all animals before any comes back.
 export const animalBag = makeBag(Object.keys(ANIMALS));
+// Animal groups for themed variants (snow -> polar-ish, pond -> water animals...). Each group has its own bag.
+export const GROUPS = {
+  all: Object.keys(ANIMALS),
+  farm: ['cat', 'dog', 'cow', 'duck', 'pig', 'rabbit', 'horse', 'chick', 'sheep', 'mouse'],
+  wild: ['bear', 'panda', 'lion', 'tiger', 'elephant', 'monkey', 'giraffe', 'zebra', 'hippo', 'fox', 'koala', 'deer', 'croc'],
+  water: ['duck', 'frog', 'penguin', 'hippo', 'croc', 'chick'],
+  small: ['cat', 'rabbit', 'mouse', 'frog', 'chick', 'owl', 'koala', 'fox', 'duck', 'penguin'],
+  cold: ['penguin', 'bear', 'rabbit', 'fox', 'owl', 'deer', 'sheep'],
+  sky: ['owl', 'duck', 'chick', 'penguin', 'monkey', 'cat', 'rabbit', 'koala'],
+};
+const bags = { all: animalBag };
+export const bagFor = (g = 'all') => bags[g] || (bags[g] = makeBag(GROUPS[g] || GROUPS.all));
 
 // Animal "talks": its sound, then its Vietnamese name.
 export function sayAnimal(audio, kind, delay = 150) {
