@@ -1,0 +1,10 @@
+{
+  "name": "Chạm Là Vui",
+  "short_name": "Chạm Là Vui",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "background_color": "#ffe8a8",
+  "theme_color": "#ffe8a8",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

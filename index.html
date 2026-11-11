@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#ffe8a8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Chạm Là Vui</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #ffe8a8; overscroll-behavior: none;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; font: 18px/1.4 system-ui, sans-serif; color: #3b2f2f; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  .ov { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 24px; text-align: center; background: rgba(255,240,200,.96); }
+  .ov.show { display: flex; }
+  .ov h1 { margin: 0; font-size: 32px; }
+  .ov p { margin: 0; max-width: 420px; color: #6b5b4b; font-size: 16px; }
+  button { font: inherit; font-size: 22px; font-weight: 700; border: 0; border-radius: 999px; padding: 18px 36px;
+    background: #ff7a59; color: #fff; box-shadow: 0 6px 0 #d4573a; cursor: pointer; }
+  button.alt { background: #8ecae6; box-shadow: 0 6px 0 #5a9ab8; }
+  #big { width: 160px; height: 160px; padding: 0; font-size: 64px; }
+  #resume { background: rgba(255,232,168,.9); }
+  #resume .tap { font-size: 96px; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.15); } }
+  #lockBtn { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; z-index: 5; display: flex; flex-direction: column;
+    align-items: center; gap: 2px; padding: 10px 12px; border-radius: 22px; background: rgba(255,255,255,.85); box-shadow: 0 4px 0 rgba(0,0,0,.12); color: #5b4636; font-size: 13px; }
+  #lockBtn.hidden { display: none; }
+  #lockBtn.reveal { animation: pulse 1s ease-in-out infinite; background: #fff; }
+  #lockBtn.open #shackle { transform: translate(14px, -6px) rotate(18deg); transform-origin: 44px 30px; }
+  #ring { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; pointer-events: none; display: none; }
+  #ring.show { display: block; }
+  #fps { position: fixed; left: 6px; bottom: 4px; font-size: 11px; color: rgba(0,0,0,.4); pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<button id="lockBtn" aria-label="Khóa">
+  <svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
+    <path id="shackle" d="M20 30 V20 a12 12 0 0 1 24 0 V30" fill="none" stroke="#5b4636" stroke-width="7" stroke-linecap="round"/>
+    <rect x="10" y="28" width="44" height="32" rx="8" fill="#ffb627" stroke="#5b4636" stroke-width="4"/>
+    <circle cx="32" cy="42" r="4.5" fill="#5b4636"/><rect x="30" y="44" width="4" height="9" rx="2" fill="#5b4636"/>
+  </svg>
+  <span id="lockTip">Chạm để khóa</span>
+</button>
+
+<div id="ring" aria-hidden="true">
+  <svg viewBox="0 0 100 100" width="140" height="140"><circle cx="50" cy="50" r="44" fill="rgba(255,255,255,.6)" stroke="rgba(0,0,0,.08)" stroke-width="8"/>
+  <circle id="ringArc" cx="50" cy="50" r="44" fill="none" stroke="#ff7a59" stroke-width="8" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="276.5" transform="rotate(-90 50 50)"/></svg>
+</div>
+
+<div class="ov" id="resume"><div class="tap">👆</div></div>
+
+<div class="ov show" id="help">
+  <h1>Chạm Là Vui</h1>
+  <p>1. Chạm <b>ổ khóa</b> ở góc màn hình để khóa — ổ khóa sẽ ẩn đi.<br>
+  2. Muốn mở khóa: <b>giữ 5 ngón tay trên màn hình 5 giây</b>, ổ khóa hiện lại, chạm vào nó.</p>
+  <p id="warn"></p>
+  <p id="pwa">Mẹo: để mất hẳn thanh địa chỉ, chọn menu trình duyệt → <b>Thêm vào màn hình chính</b>, rồi mở game từ biểu tượng đó.</p>
+  <button id="ok">Đã hiểu</button>
+</div>
+
+<div id="fps"></div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
