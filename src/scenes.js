@@ -1,42 +1,8 @@
 // Scenes: each has resize(W,H), enter(), tap(x,y), drag(x,y), update(dt), draw(ctx).
 // Rule for every scene: a tap ANYWHERE does something (no misses, no fail state).
-import { drawAnimal, drawStar, drawBush, ANIMALS } from './art.js';
-
-const TAU = Math.PI * 2;
-const rnd = (a, b) => a + Math.random() * (b - a);
-const pick = (a) => a[Math.random() * a.length | 0];
-export const COLORS = ['#ff5d73', '#ffb627', '#4cc9f0', '#7bd389', '#b388ff', '#ff8fab', '#3a86ff', '#ff7a59'];
-const KINDS = Object.keys(ANIMALS);
-const buzz = (ms) => { try { navigator.vibrate?.(ms); } catch { /* ignore */ } };
-
-// Shared particle burst
-function makeParticles() {
-  const list = [];
-  return {
-    burst(x, y, n, size, colors = COLORS, speed = 260) {
-      for (let i = 0; i < n; i++) {
-        const a = rnd(0, TAU), v = rnd(0.4, 1) * speed;
-        list.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: size * rnd(0.5, 1), c: pick(colors), life: 0, max: rnd(0.7, 1.2), star: Math.random() < 0.4, rot: rnd(0, TAU) });
-      }
-    },
-    update(dt, g = 300) {
-      for (let i = list.length - 1; i >= 0; i--) {
-        const p = list[i]; p.life += dt;
-        if (p.life >= p.max) { list.splice(i, 1); continue; }
-        p.vx *= 0.97; p.vy = p.vy * 0.97 + g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += dt * 3;
-      }
-      if (list.length > 400) list.splice(0, list.length - 400);
-    },
-    draw(ctx) {
-      for (const p of list) {
-        ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.c;
-        if (p.star) drawStar(ctx, p.x, p.y, p.r, p.rot);
-        else { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill(); }
-      }
-      ctx.globalAlpha = 1;
-    },
-  };
-}
+import { drawAnimal, drawBush, ANIMALS } from './art.js';
+import { TAU, rnd, pick, COLORS, buzz, makeParticles, animalBag, sayAnimal } from './fx.js';
+import { moreScenes } from './games2.js';
 
 // 1) Tap -> a flower blooms + confetti; drag -> sparkle trail.
 function bloomScene(audio) {
@@ -93,29 +59,28 @@ function bloomScene(audio) {
   };
 }
 
-// 2) Peekaboo: 3 bushes; tap anywhere -> the nearest bush shows an animal that "talks".
+// 2) Peekaboo: 5 bushes; tap anywhere -> the nearest bush shows an animal that "talks".
 function peekScene(audio) {
-  let W = 1, H = 1, t = 0, idle = 0, lastKind = '';
-  const holes = [0, 1, 2].map(() => ({ x: 0, y: 0, s: 1, kind: null, phase: 0, timer: 0, wig: 0, bounce: 0 }));
+  let W = 1, H = 1, t = 0, idle = 0;
+  const holes = [0, 1, 2, 3, 4].map(() => ({ x: 0, y: 0, s: 1, kind: null, phase: 0, timer: 0, wig: 0, bounce: 0 }));
   const parts = makeParticles();
   const POP = 0.35, HOLD = 2.8;
+  // Landscape: a zigzag row (back row higher). Portrait: zigzag column. Drawn back-to-front (sorted by y).
+  const PORT = [[0.28, 0.3], [0.72, 0.42], [0.28, 0.56], [0.72, 0.7], [0.3, 0.86]];
   function layout() {
     const land = W > H;
     holes.forEach((h, i) => {
-      if (land) { h.x = W * (0.2 + 0.3 * i); h.y = H * 0.7; h.s = Math.min(W * 0.12, H * 0.22); }
-      else { h.x = W * (i === 1 ? 0.68 : 0.32); h.y = H * (0.3 + 0.25 * i); h.s = Math.min(W * 0.2, H * 0.1); }
+      if (land) { h.x = W * (0.1 + 0.2 * i); h.y = H * (i % 2 ? 0.6 : 0.82); h.s = Math.min(W * 0.075, H * 0.15); }
+      else { h.x = W * PORT[i][0]; h.y = H * PORT[i][1]; h.s = Math.min(W * 0.16, H * 0.075); }
     });
   }
   function show(h) {
     if (h.kind && h.phase > 0) { h.bounce = 1; h.timer = 0; } // already out: bounce + talk again
     else {
-      let k; do k = pick(KINDS); while (k === lastKind && KINDS.length > 1);
-      h.kind = k; lastKind = k; h.timer = 0; h.phase = 0.001;
+      h.kind = animalBag.next(); h.timer = 0; h.phase = 0.001;
       audio.rustle();
     }
-    const a = ANIMALS[h.kind];
-    setTimeout(() => audio.animal(h.kind), 150);
-    audio.say(a.name, 900);
+    sayAnimal(audio, h.kind);
     parts.burst(h.x, h.y - h.s * 1.2, 10, h.s * 0.08, ['#7bd389', '#a7e8a0', '#ffd43b'], 200);
     buzz(20);
   }
@@ -158,7 +123,7 @@ function peekScene(audio) {
       ctx.fillStyle = '#9be38a'; ctx.beginPath(); ctx.moveTo(0, H * 0.2);
       for (let x = 0; x <= W; x += 20) ctx.lineTo(x, H * 0.2 + Math.sin(x * 0.02) * 10);
       ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
-      for (const h of holes) {
+      for (const h of [...holes].sort((p, q) => p.y - q.y)) {
         const wig = Math.sin(t * 30) * h.wig * h.s * 0.06;
         if (h.kind) {
           const e = h.phase * (2 - h.phase), b = Math.sin(h.bounce * Math.PI) * h.s * 0.25;
@@ -179,7 +144,7 @@ function bubbleScene(audio) {
   const bubbles = [], faces = [], parts = makeParticles();
   function add(y) {
     const r = S * rnd(0.09, 0.14);
-    bubbles.push({ x: rnd(r, W - r), y: y ?? H + r, r, vy: rnd(45, 75) * (S / 600), ph: rnd(0, TAU), c: pick(COLORS), kind: Math.random() < 0.35 ? pick(KINDS) : null });
+    bubbles.push({ x: rnd(r, W - r), y: y ?? H + r, r, vy: rnd(45, 75) * (S / 600), ph: rnd(0, TAU), c: pick(COLORS), kind: Math.random() < 0.35 ? animalBag.next() : null });
   }
   return {
     name: 'bubbles',
@@ -192,7 +157,7 @@ function bubbleScene(audio) {
         const b = bubbles.splice(best, 1)[0];
         parts.burst(b.x, b.y, 18, b.r * 0.12, [b.c, '#ffffff', '#bde0fe'], 300);
         audio.pop(); buzz(20);
-        if (b.kind) { faces.push({ x: b.x, y: b.y, kind: b.kind, age: 0, s: b.r * 0.8 }); setTimeout(() => audio.animal(b.kind), 120); audio.say(ANIMALS[b.kind].name, 800); }
+        if (b.kind) { faces.push({ x: b.x, y: b.y, kind: b.kind, age: 0, s: b.r * 0.8 }); sayAnimal(audio, b.kind, 120); }
       } else {
         parts.burst(x, y, 8, S * 0.015, ['#ffffff', '#bde0fe'], 150); audio.twinkle();
       }
@@ -263,5 +228,5 @@ function sleepScene(audio) {
 }
 
 export function makeScenes(audio) {
-  return { play: [bloomScene(audio), peekScene(audio), bubbleScene(audio)], sleep: sleepScene(audio) };
+  return { play: [bloomScene(audio), peekScene(audio), bubbleScene(audio), ...moreScenes(audio)], sleep: sleepScene(audio) };
 }

@@ -1,18 +1,22 @@
 // Chạm Là Vui: tap game for ~1-year-olds. Scenes rotate automatically; session ends with a sleep screen.
-// URL params: ?min=10 (session minutes), ?scene=75 (seconds per scene),
+// URL params: ?min=10 (session minutes), ?scene=60 (seconds per game), ?game=fish (start with that game),
 //   ?dev (fps readout; key "u" toggles a fake 5-finger hold for headless tests)
 import { createAudio } from './audio.js';
 import { createLock } from './lock.js';
 import { makeScenes } from './scenes.js';
+import { shuffle } from './fx.js';
 
 const q = new URLSearchParams(location.search);
-const SESSION_SEC = (+q.get('min') || 10) * 60, SCENE_SEC = +q.get('scene') || 75, DEV = q.has('dev');
+const SESSION_SEC = (+q.get('min') || 10) * 60, SCENE_SEC = +q.get('scene') || 60, DEV = q.has('dev');
 const REVEAL_SEC = 10; // padlock stays visible this long after the parent gesture
 const $ = (id) => document.getElementById(id);
 const cv = $('c'), ctx = cv.getContext('2d');
 const audio = createAudio();
 const scenes = makeScenes(audio);
-let W = 1, H = 1, cur = scenes.play[0], idx = 0, sceneT = 0, sessionT = 0, fade = 0;
+// Games come in a shuffled order; every game is played once before any repeats (10 min = 10 games of 60 s).
+let order = shuffle([...scenes.play]);
+if (q.get('game')) { const g = order.find((s) => s.name === q.get('game')); if (g) order = [g, ...order.filter((s) => s !== g)]; }
+let W = 1, H = 1, cur = order[0], idx = 0, sceneT = 0, sessionT = 0, fade = 0;
 let mode = 'open'; // open (padlock shown, unlocked) | locked (padlock hidden) | reveal (locked, padlock shown) | lost (fullscreen dropped)
 let revealT = 0, devHeld = false, pinCheck = 0;
 
@@ -54,7 +58,11 @@ function resize() {
 addEventListener('resize', resize); resize();
 
 function setScene(s) { cur = s; cur.enter(); sceneT = 0; fade = 1; audio.whoosh(); }
-setScene(scenes.play[0]);
+setScene(order[0]);
+function nextGame() {
+  if (++idx >= order.length) { const prev = cur; order = shuffle([...scenes.play]); if (order[0] === prev) order.push(order.shift()); idx = 0; }
+  setScene(order[idx]);
+}
 
 const playing = () => mode !== 'lost';
 const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
@@ -71,7 +79,7 @@ function frame(now) {
     sessionT += dt; sceneT += dt;
     if (cur !== scenes.sleep) {
       if (sessionT >= SESSION_SEC) setScene(scenes.sleep);
-      else if (sceneT >= SCENE_SEC) { idx = (idx + 1) % scenes.play.length; setScene(scenes.play[idx]); }
+      else if (sceneT >= SCENE_SEC) nextGame();
     }
   }
   // Parent gesture: 5 fingers held for 5 s -> padlock reappears.
