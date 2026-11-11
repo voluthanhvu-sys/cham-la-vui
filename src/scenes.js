@@ -4,6 +4,7 @@
 import { drawAnimal, drawCover, drawStar, drawHeart, drawLeaf, drawFlake } from './art.js';
 import { TAU, rnd, pick, COLORS, buzz, makeParticles, bagFor, sayAnimal } from './fx.js';
 import { moreScenes } from './games2.js';
+import { extraScenes } from './games3.js';
 
 export const grad = (ctx, W, H, a, b) => { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, a); g.addColorStop(1, b); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
 function faceOn(ctx, r) { // tiny smiley at (0,0)
@@ -278,7 +279,7 @@ export function makeScenes(audio) {
     ...variants(audio, 'bloom', bloomScene, BLOOM),
     ...variants(audio, 'peek', peekScene, PEEK),
     ...variants(audio, 'bubbles', bubbleScene, FLOAT),
-    ...moreScenes(audio),
+    ...moreScenes(audio), ...extraScenes(audio),
   ];
   return { play, sleep: sleepScene(audio) };
 }
