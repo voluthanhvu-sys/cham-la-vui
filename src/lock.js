@@ -18,9 +18,15 @@ export function createLock({ onLost, dev = false }) {
   // Back trap. On touch devices it is ALWAYS on: iPhone users lock with Guided Access (no padlock), and Safari's
   // left-edge swipe = browser back, which Guided Access allows. Browsers skip entries pushed without a gesture -> push on touch.
   const trapAlways = matchMedia('(pointer: coarse)').matches;
-  const trap = () => { if (!history.state?.baby) history.pushState({ baby: 1 }, ''); };
-  addEventListener('popstate', () => { if (locked || trapAlways) trap(); }); // back button / edge swipe stays here
-  if (trapAlways) addEventListener('touchend', trap, { capture: true, passive: true });
+  // Safari shows a SNAPSHOT of the previous entry during the swipe (user saw the old help screen for 1-3 s).
+  // So while playing, push a fresh entry every few seconds: the previous entry then looks like the game itself.
+  let lastPush = 0;
+  const trap = (fresh) => {
+    const now = Date.now();
+    if (!history.state?.baby || (fresh && now - lastPush > 3000)) { history.pushState({ baby: now }, ''); lastPush = now; }
+  };
+  addEventListener('popstate', () => { if (locked || trapAlways) trap(false); }); // back button / edge swipe stays here
+  if (trapAlways) addEventListener('touchend', () => trap(true), { capture: true, passive: true });
   addEventListener('beforeunload', (e) => { if (locked && !native) { e.preventDefault(); e.returnValue = ''; } });
   document.addEventListener('gesturestart', (e) => e.preventDefault()); // iOS pinch zoom
   document.addEventListener('fullscreenchange', () => { if (locked && !native && !document.fullscreenElement) onLost(); });
