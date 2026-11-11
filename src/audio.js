@@ -4,7 +4,7 @@ import { ANIMALS } from './art.js';
 const SCALE = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5]; // C major pentatonic, 2 octaves
 
 export function createAudio() {
-  let ac = null, master = null, noiseBuf = null, viVoice = null;
+  let ac = null, master = null, noiseBuf = null, viVoice = null, speechOpen = false, lastUtter = null;
 
   function init() {
     // iPhone: WebAudio is muted by the silent switch unless the session is "playback" (iOS 17+).
@@ -75,8 +75,17 @@ export function createAudio() {
     boop() { tone(0, 0.32, { curve: [500, 950, 700], vol: 0.25 }); },
   };
 
+  // iPhone: speak() stays silent for the whole page unless the FIRST speak() ran inside a real gesture (touchend/click).
+  function unlockSpeech() {
+    const ss = window.speechSynthesis;
+    if (speechOpen || !ss || window.BabyNative?.say) return;
+    speechOpen = true; pickVoice();
+    const u = new SpeechSynthesisUtterance(''); u.volume = 0; u.lang = 'vi-VN'; lastUtter = u; ss.speak(u);
+  }
+
   return {
     init,
+    unlockSpeech,
     note(i, at = 0) { const f = SCALE[((i % SCALE.length) + SCALE.length) % SCALE.length]; tone(f, 0.7, { type: 'triangle', vol: 0.3, at }); tone(f * 2, 0.35, { vol: 0.06, at }); },
     pop() { tone(320 + Math.random() * 260, 0.14, { slide: 3, vol: 0.4 }); noise(0.05, { vol: 0.12, freq: 3200 }); },
     twinkle() { tone(SCALE[4 + (Math.random() * 4 | 0)] * 2, 0.25, { vol: 0.07 }); },
@@ -95,12 +104,20 @@ export function createAudio() {
       const nat = window.BabyNative;
       if (nat?.say) { setTimeout(() => nat.say(text), delay); return; } // Android shell: native TTS
       const ss = window.speechSynthesis;
-      if (!ss || !viVoice) return;
-      setTimeout(() => {
-        ss.cancel();
+      if (!ss) return;
+      const go = () => {
+        if (!viVoice) pickVoice();
+        // iPhone often returns an empty voice list and no voiceschanged: lang alone selects its Vietnamese voice.
+        // A loaded list without Vietnamese = stay silent rather than read Vietnamese with a foreign voice.
+        if (!viVoice && ss.getVoices?.().length) return;
         const u = new SpeechSynthesisUtterance(text);
-        u.voice = viVoice; u.lang = viVoice.lang; u.rate = 0.85; u.pitch = 1.3;
-        ss.speak(u);
+        if (viVoice) u.voice = viVoice;
+        u.lang = viVoice?.lang || 'vi-VN'; u.rate = 0.85; u.pitch = 1.3;
+        lastUtter = u; // Safari drops utterances that get garbage-collected while waiting
+        ss.resume?.(); ss.speak(u);
+      };
+      setTimeout(() => {
+        if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(go, 80); } else go(); // Safari loses a speak() right after cancel()
       }, delay);
     },
   };

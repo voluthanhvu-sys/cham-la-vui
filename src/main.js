@@ -33,6 +33,15 @@ function pickNext(prev) {
 const want = q.get('game'), wantE = want && (scenes.play.find((e) => e.name === want) || scenes.play.find((e) => e.name.startsWith(want + '.')));
 const first = wantE ? build(wantE) : pickNext(null);
 let W = 1, H = 1, cur = first, sceneT = 0, sessionT = 0, fade = 0;
+// iPhone keeps the status bar strip outside the page and paints it with theme-color: match it to the top of the current game.
+// Once per game and iPhone only (repeated getImageData can push Chrome canvases off the GPU).
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let tintDue = false;
+function tintStatusBar() {
+  const [r, g, b] = ctx.getImageData(Math.round(cv.width / 2), 0, 1, 1).data, c = `rgb(${r},${g},${b})`;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', c);
+  document.documentElement.style.background = document.body.style.background = c;
+}
 let mode = 'open'; // open (padlock shown, unlocked) | locked (padlock hidden) | reveal (locked, padlock shown) | lost (fullscreen dropped)
 let revealT = 0, devHeld = false, pinCheck = 0;
 
@@ -73,7 +82,7 @@ function resize() {
 }
 addEventListener('resize', resize); resize();
 
-function setScene(s) { markSeen(s); cur = s; cur.resize(W, H); cur.enter(); sceneT = 0; fade = 1; audio.whoosh(); }
+function setScene(s) { markSeen(s); cur = s; cur.resize(W, H); cur.enter(); sceneT = 0; fade = 1; tintDue = IOS; audio.whoosh(); }
 setScene(first);
 function nextGame() { setScene(pickNext(cur)); }
 
@@ -81,7 +90,7 @@ const playing = () => mode !== 'lost';
 const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!playing()) return; audio.init(); cur.tap(...pos(e)); });
 // iOS counts touchend/click as a user gesture for audio, not pointerdown -> also unlock audio there.
-for (const ev of ['touchend', 'click']) addEventListener(ev, () => audio.init(), { capture: true, passive: true });
+for (const ev of ['touchend', 'click']) addEventListener(ev, () => { audio.init(); audio.unlockSpeech(); }, { capture: true, passive: true });
 cv.addEventListener('pointermove', (e) => { if (playing() && e.buttons) cur.drag(...pos(e)); });
 
 const ARC = 276.5;
@@ -109,6 +118,7 @@ function frame(now) {
   cur.draw(ctx);
   if (fade > 0) { ctx.fillStyle = `rgba(255,255,255,${fade})`; ctx.fillRect(0, 0, W, H); fade = Math.max(0, fade - dt * 2); }
   if (DEV) { fpsAcc += dt; fpsN++; if (fpsAcc > 1) { $('fps').textContent = `${fpsN} fps · ${cur.name} · ${mode} · ${Math.round(sessionT)}s`; fpsAcc = 0; fpsN = 0; } }
+  if (tintDue && sceneT > 1.5) { tintDue = false; tintStatusBar(); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
