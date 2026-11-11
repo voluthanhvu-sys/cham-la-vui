@@ -84,6 +84,7 @@ export function createAudio() {
     whoosh() { noise(0.4, { vol: 0.1, freq: 600, q: 0.5 }); },
     animal(kind) { (ANIMAL[kind] || ANIMAL[ANIMALS[kind]?.snd] || ANIMAL.boop)(); },
     toot() { for (const at of [0, 0.4]) { tone(523, 0.32, { type: 'square', vol: 0.09, at, lp: 1500 }); tone(659, 0.32, { type: 'square', vol: 0.09, at, lp: 1500 }); } },
+    drum(i) { const k = ((i % 8) + 8) % 8; tone(90 + k * 22, 0.4, { slide: 0.55, vol: 0.4 }); noise(0.12, { vol: 0.18, freq: 180 + k * 70, q: 1.5 }); },
     chime(i) { const f = SCALE[((i % 8) + 8) % 8]; for (const [k, at] of [[1, 0], [1.5, 0.08], [2, 0.16]]) tone(f * k, 0.6, { vol: 0.12, at }); },
     lullaby() { // "Twinkle twinkle" opening (public domain), slow and soft
       const m = [0, 0, 4, 4, 5, 5, 4, -1, 3, 3, 2, 2, 1, 1, 0];
