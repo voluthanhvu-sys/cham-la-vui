@@ -83,7 +83,11 @@ export function createAudio() {
   // Pre-made voice clips (made with the Nubia's Vietnamese TTS): play through WebAudio, which works on iPhone
   // when Safari's speechSynthesis stays silent (no gesture / no Vietnamese voice). Missing file = speech fallback.
   const clips = {};
+  let defBuf = null;
   function loadClips() {
+    // Default song (made with Suno for this app): one of two, picked per visit; a parent's own file wins.
+    fetch(`sounds/song${1 + (Math.random() * 2 | 0)}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : null))
+      .then((b) => b && ac.decodeAudioData(b)).then((buf) => { if (buf) defBuf = buf; }).catch(() => {});
     for (const name of ['call']) {
       fetch(`sounds/${name}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : null))
         .then((b) => b && ac.decodeAudioData(b)).then((buf) => { if (buf) clips[name] = buf; }).catch(() => {});
@@ -113,14 +117,15 @@ export function createAudio() {
   }
   function songPlay(sec) {
     if (!ac) return;
-    if (!songBuf) { tuneStep(Math.max(1, Math.round(sec / 0.2))); return; }
+    const buf = songBuf || defBuf;
+    if (!buf) { tuneStep(Math.max(1, Math.round(sec / 0.2))); return; }
     const now = ac.currentTime;
     if (!songNode || now >= songUntil - 0.03) {
-      if (songNode) { songPos = (songFrom + (songUntil - songStart)) % songBuf.duration; try { songNode.stop(); } catch { /* */ } }
-      songNode = ac.createBufferSource(); songNode.buffer = songBuf; songNode.loop = true;
+      if (songNode) { songPos = (songFrom + (songUntil - songStart)) % buf.duration; try { songNode.stop(); } catch { /* */ } }
+      songNode = ac.createBufferSource(); songNode.buffer = buf; songNode.loop = true;
       songGain = ac.createGain(); songNode.connect(songGain); songGain.connect(ac.destination);
       songGain.gain.setValueAtTime(0, now); songGain.gain.linearRampToValueAtTime(0.8, now + 0.04);
-      songNode.start(now, songPos); songStart = now; songFrom = songPos;
+      songNode.start(now, songPos % buf.duration); songStart = now; songFrom = songPos;
     } else { songGain.gain.cancelScheduledValues(now); songGain.gain.setValueAtTime(0.8, now); }
     songUntil = now + sec;
     songGain.gain.setValueAtTime(0.8, Math.max(now + 0.05, songUntil - 0.15)); songGain.gain.linearRampToValueAtTime(0, songUntil);
