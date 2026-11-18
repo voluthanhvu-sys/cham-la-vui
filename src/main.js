@@ -4,6 +4,7 @@
 import { createAudio } from './audio.js';
 import { createLock } from './lock.js';
 import { makeScenes } from './scenes.js';
+import { createAttention, ACTIVE_SEC } from './attention.js';
 
 const q = new URLSearchParams(location.search);
 const SESSION_SEC = (+q.get('min') || 10) * 60, SCENE_SEC = +q.get('scene') || 60, DEV = q.has('dev');
@@ -12,6 +13,7 @@ const $ = (id) => document.getElementById(id);
 const cv = $('c'), ctx = cv.getContext('2d');
 const audio = createAudio();
 const scenes = makeScenes(audio);
+const att = createAttention(audio);
 // Game rotation is remembered ACROSS visits (localStorage): a game comes back only after every game has been played once.
 const SEEN_KEY = 'baby.seen';
 let seen = new Set(); try { seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')); } catch { /* private mode */ }
@@ -55,6 +57,7 @@ function setMode(m) {
   btn.classList.toggle('hidden', m === 'locked' || m === 'lost');
   btn.classList.toggle('open', m === 'open');
   btn.classList.toggle('reveal', m === 'reveal');
+  $('songBtn').classList.toggle('hidden', m !== 'open');
   $('lockTip').textContent = m === 'reveal' ? 'Chạm để mở khóa' : 'Chạm để khóa';
   if (m === 'reveal') revealT = REVEAL_SEC;
 }
@@ -71,24 +74,40 @@ $('lockBtn').addEventListener('click', async (e) => {
 $('resume').addEventListener('click', async () => { await lock.relock(); show('resume', false); if (mode === 'lost') setMode('locked'); });
 $('ok').addEventListener('click', () => { audio.init(); show('help', false); try { localStorage.setItem('baby.help', '1'); } catch { /* private mode */ } });
 try { if (localStorage.getItem('baby.help')) show('help', false); } catch { /* keep help */ }
+// Parent's own song for the coconut games + call-back: picked from this phone, kept in IndexedDB on this phone only.
+function songDb(fn) {
+  try {
+    const rq = indexedDB.open('baby', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+    rq.onsuccess = () => { try { fn(rq.result.transaction('kv', 'readwrite').objectStore('kv')); } catch { /* */ } };
+  } catch { /* private mode */ }
+}
+songDb((st) => { const g = st.get('song'); g.onsuccess = () => { if (g.result) { audio.songLoad(g.result); $('songTip').textContent = 'Đã có bài hát'; } }; });
+$('songBtn').addEventListener('click', (e) => { e.stopPropagation(); audio.init(); $('songFile').click(); });
+$('songFile').addEventListener('change', async () => {
+  const f = $('songFile').files?.[0]; if (!f) return;
+  const bytes = await f.arrayBuffer();
+  audio.songLoad(bytes.slice(0)); songDb((st) => st.put(bytes, 'song'));
+  $('songTip').textContent = 'Đã có bài hát'; audio.song(3);
+});
 if (DEV) addEventListener('keydown', (e) => { if (e.key === 'u') devHeld = !devHeld; });
 
 function resize() {
   const dpr = Math.min(2, devicePixelRatio || 1);
-  W = innerWidth; H = innerHeight;
+  W = cv.clientWidth || innerWidth; H = cv.clientHeight || innerHeight; // not innerHeight: on the iPhone home-screen app the canvas starts below the status bar
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  cur.resize(W, H); if (cur !== scenes.sleep) scenes.sleep.resize(W, H);
+  att.resize(W, H); cur.resize(W, H); if (cur !== scenes.sleep) scenes.sleep.resize(W, H);
 }
 addEventListener('resize', resize); resize();
 
-function setScene(s) { markSeen(s); cur = s; cur.resize(W, H); cur.enter(); sceneT = 0; fade = 1; tintDue = IOS; audio.whoosh(); }
+function setScene(s) { if (cur !== s) cur.leave?.(); markSeen(s); cur = s; cur.resize(W, H); cur.enter(); att.reset(); sceneT = 0; fade = 1; tintDue = IOS; audio.whoosh(); }
 setScene(first);
 function nextGame() { setScene(pickNext(cur)); }
 
 const playing = () => mode !== 'lost';
 const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!playing()) return; audio.init(); cur.tap(...pos(e)); });
+cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!playing()) return; audio.init(); cur.tap(...pos(e)); if (cur !== scenes.sleep) att.tap(...pos(e)); });
 // iOS counts touchend/click as a user gesture for audio, not pointerdown -> also unlock audio there.
 for (const ev of ['touchend', 'click']) addEventListener(ev, () => { audio.init(); audio.unlockSpeech(); }, { capture: true, passive: true });
 cv.addEventListener('pointermove', (e) => { if (playing() && e.buttons) cur.drag(...pos(e)); });
@@ -101,7 +120,9 @@ function frame(now) {
     sessionT += dt; sceneT += dt;
     if (cur !== scenes.sleep) {
       if (sessionT >= SESSION_SEC) setScene(scenes.sleep);
-      else if (sceneT >= SCENE_SEC) nextGame();
+      // Normal game time is SCENE_SEC, but a game the child is busy tapping may run up to twice as long.
+      else if (att.update(dt)) nextGame(); // nobody tapped after the call-back animal -> try another game
+      else if (sceneT >= SCENE_SEC && (att.idle >= ACTIVE_SEC || sceneT >= SCENE_SEC * 2)) nextGame();
     }
   }
   // Parent gesture: 5 fingers held for 5 s -> padlock reappears.
@@ -114,8 +135,10 @@ function frame(now) {
   if (lock.native && lock.locked && (pinCheck += dt) > 2) { pinCheck = 1; if (!lock.pinned() && !lock.guarded()) { lock.unlock(); setMode('open'); } }
   if (!lock.locked) pinCheck = 0;
 
+  if (cur.skip) { cur.skip = false; cur.leave?.(); nextGame(); } // e.g. camera refused -> another game
   cur.update(dt);
   cur.draw(ctx);
+  if (cur !== scenes.sleep) att.draw(ctx);
   if (fade > 0) { ctx.fillStyle = `rgba(255,255,255,${fade})`; ctx.fillRect(0, 0, W, H); fade = Math.max(0, fade - dt * 2); }
   if (DEV) { fpsAcc += dt; fpsN++; if (fpsAcc > 1) { $('fps').textContent = `${fpsN} fps · ${cur.name} · ${mode} · ${Math.round(sessionT)}s`; fpsAcc = 0; fpsN = 0; } }
   if (tintDue && sceneT > 1.5) { tintDue = false; tintStatusBar(); }

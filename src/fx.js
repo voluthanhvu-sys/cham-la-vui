@@ -5,7 +5,7 @@ export const TAU = Math.PI * 2;
 export const rnd = (a, b) => a + Math.random() * (b - a);
 export const pick = (a) => a[Math.random() * a.length | 0];
 export const COLORS = ['#ff5d73', '#ffb627', '#4cc9f0', '#7bd389', '#b388ff', '#ff8fab', '#3a86ff', '#ff7a59'];
-export const buzz = (ms) => { try { navigator.vibrate?.(ms); } catch { /* ignore */ } };
+export const buzz = () => {}; // vibration removed (user request 2026-11-18); calls kept as no-ops
 
 export function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; }

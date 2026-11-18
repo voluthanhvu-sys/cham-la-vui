@@ -17,6 +17,7 @@ export function createAudio() {
     noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    decodeSong();
     pickVoice();
     window.speechSynthesis?.addEventListener?.('voiceschanged', pickVoice);
   }
@@ -75,6 +76,37 @@ export function createAudio() {
     boop() { tone(0, 0.32, { curve: [500, 950, 700], vol: 0.25 }); },
   };
 
+  // Song for the coconut games and the call-back: the parent's own audio file (kept on this device, see main.js)
+  // or, without a file, a built-in ORIGINAL bouncy tune. Every tap plays the next bit; the song pauses when taps stop.
+  let songBuf = null, songBytes = null, songPos = 0, songNode = null, songGain = null, songStart = 0, songFrom = 0, songUntil = 0, tunePos = 0;
+  async function decodeSong() {
+    if (!ac || !songBytes) return;
+    const b = songBytes; songBytes = null;
+    try { songBuf = await ac.decodeAudioData(b.slice(0)); songPos = 0; } catch { songBuf = null; }
+  }
+  const TUNE = [0, 4, 7, 4, 9, 7, 4, -1, 2, 4, 5, 4, 2, -5, 0, -1, 7, 7, 9, 7, 4, 7, 12, -1, 11, 9, 7, 5, 4, 2, 0, -1];
+  function tuneStep(n) {
+    for (let i = 0; i < n; i++) {
+      const k = TUNE[tunePos++ % TUNE.length], at = i * 0.2;
+      noise(0.04, { vol: 0.12, at, freq: 2400, q: 4 }); // "coco" woodblock on every step
+      if (k !== -1) { const f = 261.63 * 2 ** (k / 12); tone(f, 0.3, { type: 'triangle', vol: 0.3, at }); tone(f * 2, 0.15, { vol: 0.06, at }); }
+    }
+  }
+  function songPlay(sec) {
+    if (!ac) return;
+    if (!songBuf) { tuneStep(Math.max(1, Math.round(sec / 0.2))); return; }
+    const now = ac.currentTime;
+    if (!songNode || now >= songUntil - 0.03) {
+      if (songNode) { songPos = (songFrom + (songUntil - songStart)) % songBuf.duration; try { songNode.stop(); } catch { /* */ } }
+      songNode = ac.createBufferSource(); songNode.buffer = songBuf; songNode.loop = true;
+      songGain = ac.createGain(); songNode.connect(songGain); songGain.connect(ac.destination);
+      songGain.gain.setValueAtTime(0, now); songGain.gain.linearRampToValueAtTime(0.8, now + 0.04);
+      songNode.start(now, songPos); songStart = now; songFrom = songPos;
+    } else { songGain.gain.cancelScheduledValues(now); songGain.gain.setValueAtTime(0.8, now); }
+    songUntil = now + sec;
+    songGain.gain.setValueAtTime(0.8, Math.max(now + 0.05, songUntil - 0.15)); songGain.gain.linearRampToValueAtTime(0, songUntil);
+  }
+
   // iPhone: speak() stays silent for the whole page unless the FIRST speak() ran inside a real gesture (touchend/click).
   function unlockSpeech() {
     const ss = window.speechSynthesis;
@@ -85,6 +117,16 @@ export function createAudio() {
 
   return {
     init,
+    ctx: () => ac,
+    songLoad(bytes) { songBytes = bytes; songBuf = null; decodeSong(); },
+    hasSong: () => !!(songBuf || songBytes),
+    song: songPlay,
+    inflate(k) { tone(260 + k * 90, 0.2, { type: 'triangle', slide: 1.5, vol: 0.22 }); },
+    boom() { noise(0.7, { vol: 0.5, freq: 220, q: 0.5 }); tone(140, 0.6, { slide: 0.3, vol: 0.4 }); noise(0.3, { vol: 0.15, freq: 3000, at: 0.05 }); },
+    chomp() { for (const at of [0, 0.18, 0.36]) noise(0.07, { vol: 0.25, freq: 1100, q: 2, at }); },
+    burp() { tone(0, 0.5, { type: 'sawtooth', curve: [150, 115, 135, 95], vol: 0.22, lp: 650, at: 0.1 }); },
+    giggle() { for (let i = 0; i < 5; i++) tone(0, 0.11, { type: 'triangle', curve: [1000 - i * 60, 1300 - i * 60, 900 - i * 60], vol: 0.18, at: i * 0.12 }); },
+    boing() { tone(0, 0.45, { curve: [220, 620, 320, 520, 280], vol: 0.25 }); },
     unlockSpeech,
     note(i, at = 0) { const f = SCALE[((i % SCALE.length) + SCALE.length) % SCALE.length]; tone(f, 0.7, { type: 'triangle', vol: 0.3, at }); tone(f * 2, 0.35, { vol: 0.06, at }); },
     pop() { tone(320 + Math.random() * 260, 0.14, { slide: 3, vol: 0.4 }); noise(0.05, { vol: 0.12, freq: 3200 }); },
