@@ -31,8 +31,8 @@ export function createAttention(audio) {
         const kind = bagFor('all').next();
         pop = { kind, x: rnd(0.3, 0.7) * W, t: 0, leave: false, out: 0 };
         audio.animal(kind);
-        audio.say('Tô ơi Tô, lại chơi nè Tô ơi!', 500);
-        setTimeout(() => { if (called) audio.song(4); }, 3800); // then sing a bit of the song (parent's file or built-in tune)
+        if (!audio.clip('call', 500)) audio.say('Tô ơi Tô, lại chơi nè Tô ơi!', 500);
+        setTimeout(() => { if (called) audio.song(4); }, 5600); // then sing a bit of the song (parent's file or built-in tune)
       }
       if (pop) {
         pop.t += dt;

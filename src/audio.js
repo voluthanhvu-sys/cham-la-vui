@@ -18,6 +18,7 @@ export function createAudio() {
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     decodeSong();
+    loadClips();
     pickVoice();
     window.speechSynthesis?.addEventListener?.('voiceschanged', pickVoice);
   }
@@ -79,6 +80,24 @@ export function createAudio() {
   // Song for the coconut games and the call-back: the parent's own audio file (kept on this device, see main.js)
   // or, without a file, a built-in ORIGINAL bouncy tune. Every tap plays the next bit; the song pauses when taps stop.
   let songBuf = null, songBytes = null, songPos = 0, songNode = null, songGain = null, songStart = 0, songFrom = 0, songUntil = 0, tunePos = 0;
+  // Pre-made voice clips (made with the Nubia's Vietnamese TTS): play through WebAudio, which works on iPhone
+  // when Safari's speechSynthesis stays silent (no gesture / no Vietnamese voice). Missing file = speech fallback.
+  const clips = {};
+  function loadClips() {
+    for (const name of ['call']) {
+      fetch(`sounds/${name}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : null))
+        .then((b) => b && ac.decodeAudioData(b)).then((buf) => { if (buf) clips[name] = buf; }).catch(() => {});
+    }
+  }
+  function clip(name, delay = 0) {
+    const buf = clips[name];
+    if (!buf || !ac) return false;
+    const src = ac.createBufferSource(), g = ac.createGain();
+    src.buffer = buf; g.gain.value = 1.4; src.connect(g); g.connect(ac.destination);
+    src.start(ac.currentTime + delay / 1000);
+    return true;
+  }
+
   async function decodeSong() {
     if (!ac || !songBytes) return;
     const b = songBytes; songBytes = null;
@@ -128,6 +147,7 @@ export function createAudio() {
     giggle() { for (let i = 0; i < 5; i++) tone(0, 0.11, { type: 'triangle', curve: [1000 - i * 60, 1300 - i * 60, 900 - i * 60], vol: 0.18, at: i * 0.12 }); },
     boing() { tone(0, 0.45, { curve: [220, 620, 320, 520, 280], vol: 0.25 }); },
     unlockSpeech,
+    clip,
     note(i, at = 0) { const f = SCALE[((i % SCALE.length) + SCALE.length) % SCALE.length]; tone(f, 0.7, { type: 'triangle', vol: 0.3, at }); tone(f * 2, 0.35, { vol: 0.06, at }); },
     pop() { tone(320 + Math.random() * 260, 0.14, { slide: 3, vol: 0.4 }); noise(0.05, { vol: 0.12, freq: 3200 }); },
     twinkle() { tone(SCALE[4 + (Math.random() * 4 | 0)] * 2, 0.25, { vol: 0.07 }); },
