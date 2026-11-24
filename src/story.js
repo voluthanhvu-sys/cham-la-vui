@@ -1,9 +1,10 @@
 // Story game (user 2026-11-24: "touch -> a cute animated story, a different one each time; dragging the hero changes the story").
-// One hero (duckling Bông) runs after the finger. Every prop knows its own reaction, and state carries over
+// The hero (Tô, drawn from the family photos, with bố, mẹ and the plush toys) runs after the finger. Every prop knows its own reaction, and state carries over
 // (mud, full belly, friends following, night), so the ORDER the child plays in makes the story. 3 places linked by vehicles.
-// Nobody touching = call-back ladder: 4 s knock, 8 s trouble ("giúp Bông"), 15 s surprise, 25 s ride to another place, 45 s sleep.
+// Nobody touching = call-back ladder: 4 s knock, 8 s trouble (any touch rescues), 15 s surprise, 25 s ride to another place, 45 s sleep.
 import { TAU, COLORS, rnd, pick, makeBag, shuffle, makeParticles } from './fx.js';
-import { drawChar, drawProp, drawWorld, drawNight, ell } from './storyArt.js';
+import { drawProp, drawWorld, drawNight, ell } from './storyArt.js';
+import { drawChar } from './storyCast.js';
 import { drawHeart } from './art.js';
 import { LINES } from './storyLines.js';
 
@@ -12,10 +13,11 @@ const PLACES = {
   beach: { props: ['tub', 'ball', 'drum', 'cake', 'balloon', 'gift', 'puddle'], ride: 'boat' },
   home: { props: ['bed', 'tub', 'lamp', 'drum', 'cake', 'gift', 'ball'], ride: 'rocket' },
 };
-const FRIENDS = ['bunny', 'turtle', 'bear'];
+const FRIENDS = ['shark', 'capy', 'tart', 'bamboo', 'bird', 'panda', 'puppy', 'dino'], PARENTS = ['mom', 'dad'];
+const FRIEND_SOUND = { shark: 'splashy', capy: 'squeak', tart: 'boing', bamboo: 'rustle', bird: 'chick', panda: 'boing', puppy: 'dog', dino: 'roar' };
 const MEM = 'baby.story';
 // seconds each act keeps the hero busy
-const DUR = { puddle: 2, cake: 1.8, tub: 2.8, bed: 4, ball: 1.6, drum: 2.2, flower: 1.6, gift: 2.6, balloon: 3.2, lamp: 1.4, friend: 2, ride: 3, saved: 1.6, trick: 2.2 };
+const DUR = { puddle: 2, cake: 1.8, tub: 2.8, bed: 4, ball: 1.6, drum: 2.2, flower: 1.6, gift: 2.6, balloon: 3.2, lamp: 1.4, friend: 2, mom: 2.4, dad: 2.8, ride: 3, saved: 1.6, trick: 2.2 };
 
 export function storyGame(audio) {
   let W = 1, H = 1, S = 1, U = 1, gy = 1, worldW = 1, t = 0, cam = 0, idle = 0, rung = 0, place = 'garden';
@@ -39,20 +41,21 @@ export function storyGame(audio) {
 
   function build(p) {
     place = p; nightTo = 0; rain = p === 'garden' && Math.random() < 0.5 ? 8 : 0; act = null; trouble = null; finger = null;
-    worldW = Math.max(W * 1.7, U * 46);
+    worldW = Math.max(W * 1.7, U * 58);
     const free = FRIENDS.filter((k) => !friends.some((f) => f.kind === k));
     const list = shuffle([...PLACES[p].props]).slice(0, 5); // 5 of the place's props + maybe a friend + the ride, shuffled along the world
-    if (free.length) list.splice(1, 0, 'friend');
+    const kinds = shuffle([...free]).slice(0, 2); list.push(...kinds.map(() => 'friend'), p === 'home' || Math.random() < 0.4 ? 'mom' : 'dad');
+    if (p === 'home') list.push('dad'); // both parents are at home
     shuffle(list); list.push(PLACES[p].ride);
     const step = worldW / (list.length + 1);
-    props = list.map((type, i) => ({ type, kind: type === 'friend' ? pick(free) : null, x: step * (i + 1) + rnd(-0.12, 0.12) * step, fy: i % 2 ? rnd(0.62, 0.85) : rnd(0.12, 0.35), w: 0, on: 0, c: pick(COLORS), cool: 0, n: 0, dirty: false, ox: 0, oy: 0, vy: 0 }));
+    props = list.map((type, i) => ({ type, kind: type === 'friend' ? kinds.pop() : null, x: step * (i + 1) + rnd(-0.12, 0.12) * step, fy: i % 2 ? rnd(0.62, 0.85) : rnd(0.12, 0.35), w: 0, on: 0, c: pick(COLORS), cool: 0, n: 0, dirty: false, ox: 0, oy: 0, vy: 0 }));
     hero.x = hero.tx = U * 5; hero.fy = hero.tfy = 0.5; cam = 0; friends.forEach((f, i) => { f.x = hero.x - U * 3 * (i + 1); f.fy = 0.5; });
     wipe = 1; save();
   }
   const Y = (fy) => gy + (H - gy) * (0.12 + fy * 0.8);
   function layout() { gy = H * 0.5; U = S * 0.064; }
 
-  function wake() { if (!asleep) return; asleep = false; nightTo = 0; say('wake'); audio.animal('duck'); }
+  function wake() { if (!asleep) return; asleep = false; nightTo = 0; say('wake'); audio.giggle(); }
   function startAct(name, p, extra) { act = { name, p, t: 0, dur: DUR[name] || DUR.ride, ...extra }; if (p) { p.n++; p.w = 1; p.cool = 2.5; } used++; }
   function moveOn() { const others = Object.keys(PLACES).filter((k) => k !== place); const ride = props.find((q) => q.type === PLACES[place].ride); startAct('ride', ride, { next: pick(others) }); say(PLACES[place].ride); (place === 'garden' ? audio.toot : audio.whoosh)(); }
 
@@ -69,13 +72,16 @@ export function storyGame(audio) {
       case 'gift': startAct('gift', p, { v: giftBag.next(), open: false }); p.on = 0; say('gift'); audio.rustle(); break;
       case 'balloon': startAct('balloon', p); audio.inflate(3); say('balloon'); break;
       case 'lamp': startAct('lamp', p); nightTo = nightTo > 0.5 ? 0 : 1; p.on = nightTo; audio.note(4); say('lamp', nightTo ? 0 : pick([1, 2])); break;
-      case 'friend': startAct('friend', p); friends.push({ kind: p.kind, x: p.x, fy: p.fy, mud: 0, dir: 1, walk: 0 }); props.splice(props.indexOf(p), 1); spawn('heart', hx, hy - U * 4, 8); audio.giggle(); say(dirty ? 'muddyFriend' : 'friend'); if (dirty) hero.mud = 0.1; save(); break;
+      case 'friend': startAct('friend', p); if (friends.length >= 5) friends.shift(); friends.push({ kind: p.kind, x: p.x, fy: p.fy, mud: 0, dir: 1, walk: 0 }); props.splice(props.indexOf(p), 1); spawn('heart', hx, hy - U * 4, 8); friendSound(p.kind); say(dirty ? 'muddyFriend' : p.kind); if (dirty) hero.mud = 0.1; save(); break;
+      case 'mom': startAct('mom', p); spawn('heart', hx, hy - U * 5, 12); audio.giggle(); if (dirty) { say('momClean'); hero.mud = 0; spawn('bubble', hx, hy - U * 2, 8); } else say('mom'); break;
+      case 'dad': startAct('dad', p, { v: n % 2 }); (n % 2 ? audio.boing : audio.whoosh)(); audio.giggle(); say('dad', n % 2 === 0 ? pick([0, 2]) : 1); break;
       default: { // vehicle
         if (dirty) { p.dirty = true; say('muddyRide'); p.cool = 2; }
         moveOn();
       }
     }
   }
+  function friendSound(k) { const f = FRIEND_SOUND[k]; if (f === 'splashy') { audio.pop(); audio.whoosh(); } else if (f === 'boing') audio.boing(); else if (f === 'rustle') audio.rustle(); else if (f === 'dog') audio.animal('dog'); else if (f === 'roar') audio.giggle(); else audio.animal(f === 'squeak' ? 'mouse' : 'chick'); }
   function rescue() { // any touch at all frees the hero
     trouble = null; startAct('saved', null); spawn('heart', hero.x, Y(hero.fy) - U * 4, 10); burst(hero.x, Y(hero.fy) - U * 3, 24); audio.giggle(); say('saved');
   }
@@ -96,11 +102,11 @@ export function storyGame(audio) {
 
   return {
     selfPaced: true, ownIdle: true,
-    resize(w, h) { const old = worldW; W = w; H = h; S = Math.min(w, h); layout(); worldW = Math.max(W * 1.7, U * 46); const k = worldW / (old || 1); if (props.length) { for (const p of props) p.x *= k; hero.x *= k; hero.tx *= k; for (const f of friends) f.x *= k; } },
+    resize(w, h) { const old = worldW; W = w; H = h; S = Math.min(w, h); layout(); worldW = Math.max(W * 1.7, U * 58); const k = worldW / (old || 1); if (props.length) { for (const p of props) p.x *= k; hero.x *= k; hero.tx *= k; for (const f of friends) f.x *= k; } },
     enter() {
       t = 0; idle = 0; rung = 0; asleep = false; nightTo = night = 0; bits = []; pend = null; used = 0;
       hero.mud = 0; hero.belly = 0;
-      friends = (mem.friends || []).slice(0, 1).map((kind) => ({ kind, x: 0, fy: 0.5, mud: 0, dir: 1, walk: 0 })); // yesterday's friend came back
+      friends = (mem.friends || []).filter((k) => FRIENDS.includes(k)).slice(0, 1).map((kind) => ({ kind, x: 0, fy: 0.5, mud: 0, dir: 1, walk: 0 })); // yesterday's friend came back
       const back = mem.visits > 0; mem.visits++;
       build(pick(Object.keys(PLACES).filter((k) => k !== mem.last)));
       say(back && Math.random() < 0.5 ? 'again' : 'hello');
@@ -111,7 +117,7 @@ export function storyGame(audio) {
       const wx = x + cam; let hit = null, bd = 1e9;
       for (const p of props) { const d = Math.hypot(wx - p.x - p.ox, (y - (Y(p.fy) - U * 1.4)) * 0.8); if (d < U * 3.2 && d < bd) { bd = d; hit = p; } }
       if (hit) { hit.w = 1; hero.tx = hit.x; hero.tfy = hit.fy; audio.note(props.indexOf(hit) + 1); }
-      else if (Math.hypot(wx - hero.x, y - (Y(hero.fy) - U * 2)) < U * 3) { audio.animal('duck'); hero.hop = 0.5; spawn('heart', hero.x, Y(hero.fy) - U * 4, 2); }
+      else if (Math.hypot(wx - hero.x, y - (Y(hero.fy) - U * 2)) < U * 3) { audio.giggle(); hero.hop = 0.5; spawn('heart', hero.x, Y(hero.fy) - U * 4, 2); }
       else { audio.pop(); spawn(pick(['bubble', 'star', 'note']), wx, y, 3); }
     },
     drag(x, y) {
@@ -138,7 +144,7 @@ export function storyGame(audio) {
         if (p.w > 0) p.w = Math.max(0, p.w - dt); if (p.cool > 0 && (!act || act.p !== p)) p.cool -= dt;
         if (p.vy || p.oy < 0) { p.vy += U * 60 * dt; p.oy += p.vy * dt; p.ox += (p.vx || 0) * dt; if (p.oy >= 0) { p.oy = 0; p.vy = p.vy > U * 6 ? -p.vy * 0.6 : 0; if (p.vy) audio.boing(); else { p.x = Math.max(U * 3, Math.min(worldW - U * 3, p.x + p.ox)); p.ox = 0; } } }
       }
-      friends.forEach((f, i) => { const tx = hero.x - hero.dir * U * 2.8 * (i + 1), dx = tx - f.x; f.walk = Math.abs(dx) > U * 0.6 ? 1 : 0; if (f.walk) { f.x += dx * Math.min(1, dt * 3); f.dir = dx > 0 ? 1 : -1; } else f.dir = hero.dir; f.fy += (hero.fy + 0.06 * (i + 1) - f.fy) * Math.min(1, dt * 3); });
+      friends.forEach((f, i) => { const tx = hero.x - hero.dir * U * (1 + 2.2 * (i + 1)), dx = tx - f.x; f.walk = Math.abs(dx) > U * 0.6 ? 1 : 0; if (f.walk) { f.x += dx * Math.min(1, dt * 3); f.dir = dx > 0 ? 1 : -1; } else f.dir = hero.dir; f.fy += (hero.fy + 0.06 * (i + 1) - f.fy) * Math.min(1, dt * 3); });
       for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.t += dt; b.x += b.vx * dt; b.y += b.vy * dt; if (b.kind === 'ball') { b.vy += U * 40 * dt; if (b.y > H * 0.95) { b.y = H * 0.95; b.vy *= -0.7; } } if (b.t > b.max) bits.splice(i, 1); }
       if (act) {
         const a = act; a.t += dt;
@@ -147,7 +153,7 @@ export function storyGame(audio) {
         if (a.t >= a.dur) {
           act = null; if (a.p) { hero.tx = hero.x; hero.tfy = hero.fy; }
           if (a.name === 'ride') build2(a.next);
-          if (a.name === 'bed') { nightTo = 0; say('wake'); audio.animal('duck'); }
+          if (a.name === 'bed') { nightTo = 0; say('wake'); audio.giggle(); }
           if (a.name === 'drum' && friends.length) say('together');
           if (a.name === 'gift') a.p.on = 0;
         }
@@ -172,12 +178,13 @@ export function storyGame(audio) {
     const x = a.p.x, y = Y(a.p.fy) - U * 2; audio.boing(); say('giftOpen');
     if (a.v === 'stars') { spawn('star', x, y, 16); audio.chime(4); } else if (a.v === 'bubbles') { spawn('bubble', x, y, 16); audio.pop(); }
     else if (a.v === 'hearts') { spawn('heart', x, y, 14); audio.giggle(); } else if (a.v === 'balls') spawn('ball', x, y, 9);
-    else { const k = FRIENDS.find((q) => !friends.some((f) => f.kind === q)); if (k) { friends.push({ kind: k, x, fy: a.p.fy, mud: 0, dir: 1, walk: 0 }); props = props.filter((q) => q.kind !== k); audio.giggle(); save(); } else spawn('note', x, y, 12); }
+    else { const k = shuffle(FRIENDS.filter((q) => !friends.some((f) => f.kind === q)))[0]; if (k && friends.length < 5) { friends.push({ kind: k, x, fy: a.p.fy, mud: 0, dir: 1, walk: 0 }); props = props.filter((q) => q.kind !== k); audio.giggle(); save(); } else spawn('note', x, y, 12); }
     burst(x, y, 26);
   }
   function drawOne(ctx, p) {
     const x = p.x + p.ox, y = Y(p.fy) + p.oy;
     if (p.type === 'friend') { drawChar(ctx, p.kind, x, y, U * 1.25, { t: t + p.x, dir: hero.x > x ? 1 : -1, arms: 0.5 + 0.5 * Math.sin(t * 3), happy: p.w > 0 }); return; }
+    if (PARENTS.includes(p.type)) { const mine = act?.p === p, u = mine ? act.t / act.dur : 0, run = mine && p.type === 'dad' && act.v === 1 ? Math.sin(u * TAU) * U * 6 : 0; if (asleep && p.type === 'mom') p.w = 0; drawChar(ctx, p.type, x + run, y, U * 1.3, { t: t + p.x, dir: hero.x >= x ? 1 : -1, walk: run ? 1 : 0, arms: mine || Math.abs(hero.x - x) < U * 9 ? 1 : 0.35 + 0.35 * Math.sin(t * 2), happy: mine || p.w > 0 }); return; }
     if (p.type === 'balloon' && act?.p === p) return; // the hero holds it
     drawProp(ctx, p.type, x, y, U * 1.35, t, p);
   }
@@ -204,9 +211,11 @@ export function storyGame(audio) {
         case 'balloon': y -= Math.sin(u * Math.PI) * Math.min(U * 9, y * 0.5); p.arms = 1; p.happy = true; drawProp(ctx, 'balloon', x + U * 0.9, y - U * 2.2, U * 1.4, t, a.p); break;
         case 'friend': p.arms = 1; p.happy = true; p.rot = Math.sin(a.t * 8) * 0.15; break;
         case 'lamp': jump(1, 2); break;
+        case 'mom': x = a.p.x + U * 1.5; y = Y(a.p.fy) + 1; p.dir = -1; p.happy = true; p.arms = 1; p.rot = Math.sin(a.t * 5) * 0.1; break;
+        case 'dad': p.happy = true; p.arms = 1; if (v === 1) { x = a.p.x + Math.sin(u * TAU) * U * 6; y = Y(a.p.fy) - U * 3.6 - Math.abs(Math.sin(a.t * 10)) * U * 0.5; } else { x = a.p.x; y = Y(a.p.fy) - U * 3.5 - Math.abs(Math.sin(u * Math.PI * 3)) * U * 4; } break;
         case 'saved': jump(3, 2.5); p.happy = true; break;
         case 'ride': { // leave the place together with the vehicle
-          const pr = a.p; if (pr) { const go = Math.max(0, u - 0.25) / 0.75, up = pr.type === 'rocket'; const vx = up ? 0 : go * go * W * 1.2, vy = up ? -go * go * H * 1.2 : Math.sin(a.t * 12) * U * 0.12; x = pr.x + vx; y = Y(pr.fy) + vy - U * (pr.type === 'car' ? 2.4 : 1); p.dir = 1; p.arms = 1; p.happy = true; if (Math.random() < 0.4) parts.burst(x - cam - U * 2, y + U, 2, S * 0.015, ['#ffffff', '#dddddd'], S * 0.2); drawChar(ctx, 'duck', x, y, s, p); drawProp(ctx, pr.type, pr.x + vx, Y(pr.fy) + vy, U * 1.6, t, { ...pr, w: up ? 0.3 : 0 }); return; }
+          const pr = a.p; if (pr) { const go = Math.max(0, u - 0.25) / 0.75, up = pr.type === 'rocket'; const vx = up ? 0 : go * go * W * 1.2, vy = up ? -go * go * H * 1.2 : Math.sin(a.t * 12) * U * 0.12; x = pr.x + vx; y = Y(pr.fy) + vy - U * (pr.type === 'car' ? 2.4 : 1); p.dir = 1; p.arms = 1; p.happy = true; if (Math.random() < 0.4) parts.burst(x - cam - U * 2, y + U, 2, S * 0.015, ['#ffffff', '#dddddd'], S * 0.2); drawChar(ctx, 'to', x, y, s, p); drawProp(ctx, pr.type, pr.x + vx, Y(pr.fy) + vy, U * 1.6, t, { ...pr, w: up ? 0.3 : 0 }); return; }
           break; }
         case 'trick':
           if (v === 'jump') jump(5, 4); else if (v === 'spin') p.rot = u * TAU * 3; else if (v === 'dance') { p.rot = Math.sin(a.t * 9) * 0.35; p.arms = 1; p.happy = true; }
@@ -217,7 +226,7 @@ export function storyGame(audio) {
     if (trouble === 'float') { y -= U * 5 + Math.sin(t * 2) * U; p.arms = 1; p.mouth = 1; drawProp(ctx, 'balloon', x + U * 0.9, y - U * 2.2, U * 1.4, t, { w: 0, c: '#ff5d73' }); }
     if (trouble === 'box') { p.box = true; p.rot = Math.sin(t * 6) * 0.12; }
     if (trouble === 'stuck') { p.arms = 1; p.mouth = 1; p.rot = Math.sin(t * 9) * 0.15; }
-    drawChar(ctx, 'duck', x, y, s, p);
+    drawChar(ctx, 'to', x, y, s, p);
     if (trouble === 'stuck') { ctx.fillStyle = '#7a4d2b'; ell(ctx, x, y - U * 0.3, U * 2.6, U * 1); }
     if (asleep || act?.name === 'bed') { ctx.fillStyle = '#ffffff'; ctx.font = `bold ${Math.round(U * 1.5)}px system-ui`; for (let i = 0; i < 3; i++) { const k = (t * 0.5 + i / 3) % 1; ctx.globalAlpha = 1 - k; ctx.fillText('z', x + U * (1 + k * 2), y - U * (3 + k * 4)); } ctx.globalAlpha = 1; }
   }
