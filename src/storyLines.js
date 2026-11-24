@@ -1,5 +1,5 @@
 // Spoken lines of the story game: key -> variants. .tmp/voice/story.mjs turns them into sounds/v clips.
-// Hero = the child Tô (told in the third person), plus bố, mẹ and the plush toys.
+// Hero = the child Tô (told in the third person), plus ba, mẹ and the plush toys.
 export const LINES = {
   hello: ['Chào Tô! Mình đi chơi thôi!', 'Tô ơi, hôm nay đi đâu nào?', 'A, Tô tới rồi! Vui quá!'],
   again: ['Tô quay lại rồi! Cả nhà nhớ Tô lắm!'],
@@ -25,7 +25,7 @@ export const LINES = {
   muddyFriend: ['Bạn phủi bùn cho Tô nè.'],
   mom: ['Mẹ ôm Tô một cái thật chặt!', 'Mẹ thơm má Tô, chụt chụt!', 'Mẹ đây! Mẹ yêu Tô nhiều lắm!'],
   momClean: ['Mẹ lau sạch bùn cho Tô nè.'],
-  dad: ['Bố tung Tô lên cao nào!', 'Bố cõng Tô chạy nhong nhong!', 'Bố đây! Hai bố con mình chơi nhé!'],
+  dad: ['Ba tung Tô lên cao nào!', 'Ba cõng Tô chạy nhong nhong!', 'Ba đây! Hai ba con mình chơi nhé!'],
   lamp: ['Tách! Trời tối rồi, sao lấp lánh.', 'Tách! Trời sáng rồi!', 'Tách! Bật đèn lên sáng trưng!'],
   car: ['Bíp bíp! Lên xe nào!', 'Brừm brừm! Xe chạy nhanh quá!'],
   boat: ['Lên thuyền ra khơi thôi!', 'Bập bềnh, bập bềnh trên sóng nước!'],
@@ -35,6 +35,6 @@ export const LINES = {
   float: ['Á, bay mất rồi! Tô ơi, kéo xuống nào!'],
   box: ['Ơ, tối thui! Ai ở trong hộp thế? Tô mở ra nào!'],
   saved: ['Hoan hô! Tô giỏi quá!', 'Thoát rồi! Ôm một cái nào!'],
-  surprise: ['Tô ơi, nhìn nè!', 'Tô ơi, bố mẹ ở đây nè!', 'Ú òa! Đây nè!'],
+  surprise: ['Tô ơi, nhìn nè!', 'Tô ơi, ba mẹ ở đây nè!', 'Ú òa! Đây nè!'],
   sleepy: ['Đi ngủ thôi. Tô ngủ ngon nhé.', 'Ngáp dài quá! Mình đi ngủ thôi Tô ơi.'],
 };

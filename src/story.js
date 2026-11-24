@@ -1,5 +1,5 @@
 // Story game (user 2026-11-24: "touch -> a cute animated story, a different one each time; dragging the hero changes the story").
-// The hero (Tô, drawn from the family photos, with bố, mẹ and the plush toys) runs after the finger. Every prop knows its own reaction, and state carries over
+// The hero (Tô, drawn from the family photos, with ba, mẹ and the plush toys) runs after the finger. Every prop knows its own reaction, and state carries over
 // (mud, full belly, friends following, night), so the ORDER the child plays in makes the story. 3 places linked by vehicles.
 // Nobody touching = call-back ladder: 4 s knock, 8 s trouble (any touch rescues), 15 s surprise, 25 s ride to another place, 45 s sleep.
 import { TAU, COLORS, rnd, pick, makeBag, shuffle, makeParticles } from './fx.js';
