@@ -97,8 +97,12 @@ const DRAW = {
       c.fillStyle = '#4c2517'; for (const d of [0.4, 0.64]) ell(c, d, 0.02, 0.06, 0.05); mouth(c, p, 0.52, 0.3, 0.16);
       if (p.happy || !p.sleep) { c.strokeStyle = INK; c.lineWidth = 0.08; line(c, -0.1, -0.22, 0.14, -0.2); }
     });
-    c.fillStyle = '#8a55b8'; c.save(); c.translate(0.45, -0.85); c.rotate(0.15); box(c, -0.3, -0.65, 0.65, 1.2, 0.28); c.fillStyle = '#fff'; box(c, -0.24, -0.2, 0.53, 0.5, 0.06); c.restore();
-    arms(c, p, sw, t, '#7b432c', null, 0.55, -1.15, 0.4, 0.26);
+    // the bottle and both paws share one transform, so the paws always hold it
+    const up = p.arms || 0; c.save(); c.translate(0.42, -0.8 - up * 0.35); c.rotate(0.12 + (up ? Math.sin(t * 10) * 0.16 * up : sw * 0.06));
+    c.fillStyle = '#8a55b8'; box(c, -0.32, -0.55, 0.66, 1.15, 0.28); c.fillStyle = '#b58be0'; box(c, -0.16, -0.68, 0.34, 0.2, 0.08); c.fillStyle = '#fff'; box(c, -0.26, -0.1, 0.54, 0.42, 0.06);
+    c.strokeStyle = '#a97f55'; c.lineWidth = 0.28; line(c, -0.78, -0.3 + up * 0.25, -0.34, 0.02); c.fillStyle = '#6d3a26'; ell(c, -0.26, 0.04, 0.2, 0.16, 0.2); ell(c, 0.36, 0.04, 0.14, 0.17);
+    c.fillStyle = '#54291a'; for (const d of [-0.06, 0.06]) ell(c, -0.1, 0.04 + d, 0.05, 0.04);
+    c.restore();
   },
   tart(c, p, sw, t) {
     c.strokeStyle = '#ffd83a'; legs(c, sw, '#ffd83a', '#ffd83a', 0.28, 0.6, 0.5);
@@ -115,14 +119,19 @@ const DRAW = {
     c.fillStyle = 'rgba(255,90,150,.55)'; for (const d of [-0.38, 0.4]) ell(c, d, -2.5, 0.11, 0.08); eyes(c, p, [-0.22, 0.26], -2.72, 0.08, t); mouth(c, { mouth: 0.5 }, 0.02, -2.45, 0.2);
     c.restore();
   },
-  // round fluffy brown bird: white face patches, long orange beak, long black wings
-  bird(c, p, sw, t) {
-    legs(c, sw, '#ff9a3c', '#ff9a3c', 0.14, 0.5, 0.3);
-    c.fillStyle = '#8a4a2c'; ell(c, -0.95, -1.2, 0.5, 0.32, -0.5); c.fillStyle = '#fff'; ell(c, -0.8, -0.85, 0.5, 0.26, -0.3);
-    c.fillStyle = '#c08d5c'; ell(c, 0, -1.25, 0.98, 0.95); c.fillStyle = '#cf9f6e'; for (let i = 0; i < 9; i++) ell(c, Math.cos(i * 0.7) * 0.85, -1.25 + Math.sin(i * 0.7) * 0.82, 0.2, 0.2);
-    c.fillStyle = '#fff'; for (const d of [0.02, 0.62]) ell(c, d, -1.4, 0.31, 0.36); eyes(c, p, [0.08, 0.66], -1.38, 0.13, t);
-    const m = p.mouth || 0; c.fillStyle = '#ff9a3c'; poly(c, [[0.22, -1.18], [0.62, -1.18], [0.95, -0.55 + m * 0.2], [0.7, -0.5 + m * 0.2]]);
-    c.strokeStyle = '#26221f'; c.lineWidth = 0.24; for (const d of [-1, 1]) { const a = 1.15 - (p.arms || 0) * 1.9 + Math.sin(t * (p.arms ? 14 : 3)) * 0.2 + sw * 0.4 * d; line(c, d * 0.95, -1.15, d * (0.95 + Math.cos(a) * 0.6), -1.15 + Math.sin(a) * 0.75); }
+  // plush mosquito: round furry head, orange proboscis, white wings, brown tail, black legs
+  mosquito(c, p, sw, t) {
+    const fl = Math.sin(t * 30) * 0.22, up = p.arms || 0, m = p.mouth || 0;
+    c.translate(0, -0.25 - Math.sin(t * 4) * 0.1);
+    c.fillStyle = '#7a3b22'; ell(c, -1.05, -1.0, 0.62, 0.34, -0.25); c.fillStyle = '#5c2b18'; ell(c, -1.5, -0.9, 0.2, 0.24, -0.25);
+    c.fillStyle = '#f3ece0'; c.save(); c.translate(-0.45, -1.6); c.rotate(0.5 + fl); ell(c, -0.5, -0.35, 0.8, 0.32, 0.2); c.restore();
+    c.strokeStyle = '#26221f'; c.lineWidth = 0.17; for (const [d, i] of [[-0.6, 0], [-0.15, 1], [0.35, 2]]) { const k = Math.sin(t * (up ? 14 : 3) + i * 2) * (0.08 + up * 0.15) + sw * 0.2 * (i - 1); c.beginPath(); c.moveTo(d, -0.65); c.lineTo(d - 0.3 + k, -0.3 - up * 0.1); c.lineTo(d - 0.12 + k, 0.12); c.stroke(); }
+    c.fillStyle = '#b98555'; ell(c, 0, -1.25, 0.84, 0.82); c.fillStyle = '#c99868'; for (let i = 0; i < 10; i++) ell(c, Math.cos(i * 0.63) * 0.72, -1.25 + Math.sin(i * 0.63) * 0.7, 0.17, 0.17);
+    c.fillStyle = '#fff'; c.save(); c.translate(-0.4, -1.65); c.rotate(0.2 - fl); ell(c, -0.45, -0.4, 0.82, 0.34, 0.35); c.restore();
+    c.strokeStyle = '#26221f'; c.lineWidth = 0.09; for (const d of [0.1, 0.4]) { c.beginPath(); c.moveTo(d, -1.98); c.quadraticCurveTo(d + 0.1, -2.35, d + 0.35, -2.4 + fl * 0.2); c.stroke(); }
+    c.fillStyle = '#fff'; for (const d of [0.02, 0.58]) ell(c, d, -1.42, 0.27, 0.32); eyes(c, p, [0.08, 0.62], -1.4, 0.13, t);
+    c.strokeStyle = '#ff9a3c'; c.lineWidth = 0.24; c.beginPath(); c.moveTo(0.5, -1.08); c.quadraticCurveTo(0.85, -1.05, 1.15 + m * 0.1, -0.55 - m * 0.25); c.stroke();
+    cheeks(c, [-0.18], -1.05, 0.14);
   },
 };
 // The next three are original designs (only the animal kinds come from the stickers, which show branded characters).
@@ -140,16 +149,16 @@ Object.assign(DRAW, {
     head(c, p, 0.1, -2.05, t, () => { c.fillStyle = '#9c5a36'; ell(c, 0, 0, 0.78, 0.68); c.fillStyle = '#6f3c22'; for (const d of [-1, 1]) ell(c, d * 0.74, 0.05 + Math.abs(sw) * 0.1, 0.22, 0.5, d * -0.25); c.fillStyle = '#f3dcc0'; ell(c, 0.18, 0.28, 0.42, 0.3); eyes(c, p, [-0.2, 0.42], -0.08, 0.12, t); c.fillStyle = '#33241e'; ell(c, 0.2, 0.16, 0.13, 0.09); mouth(c, p, 0.2, 0.4, 0.18); });
     c.fillStyle = '#58b368'; box(c, -0.45, -1.55, 1.0, 0.18, 0.09);
   },
-  dino(c, p, sw, t) { // mint baby dinosaur with orange back plates and spots
-    legs(c, sw, '#6fd0b0', '#4fb394', 0.4, 0.55, 0.36);
-    c.fillStyle = '#6fd0b0'; poly(c, [[-0.4, -1.2], [-1.6, -0.35 + Math.sin(t * 5) * 0.12], [-0.2, -0.35]]);
-    c.fillStyle = '#ff9f5a'; for (const [a, d] of [[-0.75, -1.6], [-0.95, -1.1], [-1.1, -0.7]]) poly(c, [[a + 0.3, d - 0.15], [a - 0.18, d - 0.22], [a + 0.25, d + 0.3]]);
-    c.fillStyle = '#6fd0b0'; ell(c, 0, -1.0, 0.8, 0.8); c.fillStyle = '#e4f7d2'; ell(c, 0.2, -0.92, 0.5, 0.58); c.fillStyle = '#4fb394'; for (const [a, d] of [[-0.5, -1.2], [-0.58, -0.8], [-0.36, -1.5]]) ell(c, a, d, 0.1, 0.1);
-    arms(c, p, sw, t, '#4fb394', null, 0.55, -1.2, 0.38, 0.24);
-    head(c, p, 0.15, -2.05, t, () => { c.fillStyle = '#ff9f5a'; for (const a of [-0.35, 0, 0.35]) poly(c, [[a - 0.17, -0.5], [a, -1.0], [a + 0.17, -0.5]]); c.fillStyle = '#6fd0b0'; ell(c, 0, 0, 0.76, 0.64); ell(c, 0.4, 0.18, 0.55, 0.42); eyes(c, p, [-0.12, 0.45], -0.15, 0.13, t); c.fillStyle = '#3a8a70'; for (const a of [0.68, 0.84]) ell(c, a, 0.08, 0.04, 0.05); cheeks(c, [-0.3], 0.2, 0.15); mouth(c, p, 0.55, 0.36, 0.2); });
+  dino(c, p, sw, t) { // yellow baby dinosaur with teal back plates and spots
+    legs(c, sw, '#ffc933', '#f0a91c', 0.4, 0.55, 0.36);
+    c.fillStyle = '#ffc933'; poly(c, [[-0.4, -1.2], [-1.6, -0.35 + Math.sin(t * 5) * 0.12], [-0.2, -0.35]]);
+    c.fillStyle = '#35b5a6'; for (const [a, d] of [[-0.75, -1.6], [-0.95, -1.1], [-1.1, -0.7]]) poly(c, [[a + 0.3, d - 0.15], [a - 0.18, d - 0.22], [a + 0.25, d + 0.3]]);
+    c.fillStyle = '#ffc933'; ell(c, 0, -1.0, 0.8, 0.8); c.fillStyle = '#fff3c4'; ell(c, 0.2, -0.92, 0.5, 0.58); c.fillStyle = '#f0a91c'; for (const [a, d] of [[-0.5, -1.2], [-0.58, -0.8], [-0.36, -1.5]]) ell(c, a, d, 0.1, 0.1);
+    arms(c, p, sw, t, '#f0a91c', null, 0.55, -1.2, 0.38, 0.24);
+    head(c, p, 0.15, -2.05, t, () => { c.fillStyle = '#35b5a6'; for (const a of [-0.35, 0, 0.35]) poly(c, [[a - 0.17, -0.5], [a, -1.0], [a + 0.17, -0.5]]); c.fillStyle = '#ffc933'; ell(c, 0, 0, 0.76, 0.64); ell(c, 0.4, 0.18, 0.55, 0.42); eyes(c, p, [-0.12, 0.45], -0.15, 0.13, t); c.fillStyle = '#b87a10'; for (const a of [0.68, 0.84]) ell(c, a, 0.08, 0.04, 0.05); cheeks(c, [-0.3], 0.2, 0.15); mouth(c, p, 0.55, 0.36, 0.2); });
   },
 });
-export const SIZE = { to: 1, dad: 1.12, mom: 1.08, shark: 1.15, capy: 1.1, tart: 0.95, bamboo: 1.1, bird: 1, panda: 1.05, puppy: 1, dino: 1.05 };
+export const SIZE = { to: 1, dad: 1.12, mom: 1.08, shark: 1.15, capy: 1.1, tart: 0.95, bamboo: 1.1, mosquito: 1, panda: 1.05, puppy: 1, dino: 1.05 };
 
 export function drawChar(c, kind, x, y, s, p) {
   const t = p.t, w = p.walk || 0, sw = Math.sin(t * 13) * w, k = s * (SIZE[kind] || 1);

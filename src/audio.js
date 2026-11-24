@@ -171,6 +171,7 @@ export function createAudio() {
     get voiceBusy() { return nowSec() < voiceUntil; },
     soft(i) { tone(392 * 2 ** (i / 12), 0.9, { vol: 0.045, attack: 0.03 }); }, // quiet background music note
     twinkle() { tone(SCALE[4 + (Math.random() * 4 | 0)] * 2, 0.25, { vol: 0.07 }); },
+    buzz() { tone(0, 0.8, { type: 'triangle', curve: [520, 640, 500, 660, 540, 600], vol: 0.12, attack: 0.05, lp: 1800 }); },
     rustle() { noise(0.35, { vol: 0.12, freq: 2500, q: 0.7 }); },
     whoosh() { noise(0.4, { vol: 0.1, freq: 600, q: 0.5 }); },
     animal(kind) { (ANIMAL[kind] || ANIMAL[ANIMALS[kind]?.snd] || ANIMAL.boop)(); },

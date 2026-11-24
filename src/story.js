@@ -13,8 +13,8 @@ const PLACES = {
   beach: { props: ['tub', 'ball', 'drum', 'cake', 'balloon', 'gift', 'puddle'], ride: 'boat' },
   home: { props: ['bed', 'tub', 'lamp', 'drum', 'cake', 'gift', 'ball'], ride: 'rocket' },
 };
-const FRIENDS = ['shark', 'capy', 'tart', 'bamboo', 'bird', 'panda', 'puppy', 'dino'], PARENTS = ['mom', 'dad'];
-const FRIEND_SOUND = { shark: 'splashy', capy: 'squeak', tart: 'boing', bamboo: 'rustle', bird: 'chick', panda: 'boing', puppy: 'dog', dino: 'roar' };
+const FRIENDS = ['shark', 'capy', 'tart', 'bamboo', 'mosquito', 'panda', 'puppy', 'dino'], PARENTS = ['mom', 'dad'];
+const FRIEND_SOUND = { shark: 'splashy', capy: 'squeak', tart: 'boing', bamboo: 'rustle', mosquito: 'buzz', panda: 'boing', puppy: 'dog', dino: 'roar' };
 const MEM = 'baby.story';
 // seconds each act keeps the hero busy
 const DUR = { puddle: 2, cake: 1.8, tub: 2.8, bed: 4, ball: 1.6, drum: 2.2, flower: 1.6, gift: 2.6, balloon: 3.2, lamp: 1.4, friend: 2, mom: 2.4, dad: 2.8, ride: 3, saved: 1.6, trick: 2.2 };
@@ -81,7 +81,7 @@ export function storyGame(audio) {
       }
     }
   }
-  function friendSound(k) { const f = FRIEND_SOUND[k]; if (f === 'splashy') { audio.pop(); audio.whoosh(); } else if (f === 'boing') audio.boing(); else if (f === 'rustle') audio.rustle(); else if (f === 'dog') audio.animal('dog'); else if (f === 'roar') audio.giggle(); else audio.animal(f === 'squeak' ? 'mouse' : 'chick'); }
+  function friendSound(k) { const f = FRIEND_SOUND[k]; if (f === 'splashy') { audio.pop(); audio.whoosh(); } else if (f === 'boing') audio.boing(); else if (f === 'rustle') audio.rustle(); else if (f === 'dog') audio.animal('dog'); else if (f === 'roar') audio.giggle(); else if (f === 'buzz') audio.buzz(); else audio.animal(f === 'squeak' ? 'mouse' : 'chick'); }
   function rescue() { // any touch at all frees the hero
     trouble = null; startAct('saved', null); spawn('heart', hero.x, Y(hero.fy) - U * 4, 10); burst(hero.x, Y(hero.fy) - U * 3, 24); audio.giggle(); say('saved');
   }

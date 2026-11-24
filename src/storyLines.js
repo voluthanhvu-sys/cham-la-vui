@@ -19,7 +19,7 @@ export const LINES = {
   giftOpen: ['Ú òa! Bất ngờ chưa!', 'Oa, đẹp quá!', 'A, thích quá đi mất!'],
   balloon: ['Tô bay lên trời rồi!', 'Bay cao, bay cao!', 'Vù! Bóng bay đưa Tô lên mây!'],
   shark: ['A, bạn cá mập! Ôm cá mập nào!'], capy: ['Bạn chuột lang nước đây! Ôm một cái!'],
-  tart: ['Bạn bánh trứng! Thơm phức luôn!'], bamboo: ['Bạn cây tre cao ơi là cao!'], bird: ['Bạn chim mỏ dài! Chíp chíp!'],
+  tart: ['Bạn bánh trứng! Thơm phức luôn!'], bamboo: ['Bạn cây tre cao ơi là cao!'], mosquito: ['Bạn muỗi bay vo ve! Vo ve, vo ve!'],
   panda: ['Bạn gấu trúc mũm mĩm! Ôm nào!'], puppy: ['Gâu gâu! Bạn cún đây rồi!'], dino: ['Bạn khủng long con! Dễ thương quá!'],
   together: ['Cả nhà nắm tay nhau nhảy múa.', 'Chơi cùng nhau vui ơi là vui!'],
   muddyFriend: ['Bạn phủi bùn cho Tô nè.'],
