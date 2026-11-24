@@ -107,21 +107,11 @@ function nextGame() { setScene(pickNext(cur)); }
 
 const playing = () => mode !== 'lost';
 const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-// Tap guard (user bug 2026-11-24: the baby slaps/swipes with the whole hand). A second finger while one is down, or a
-// tap within TAP_GAP_MS of the last one, only gets the colored ring: the game itself reacts to one clean tap at a time.
-const TAP_GAP_MS = 180, down = new Set();
-let lastTap = 0;
-cv.addEventListener('pointerdown', (e) => {
-  e.preventDefault(); if (!playing()) return; audio.init();
-  const clean = down.size === 0 && e.timeStamp - lastTap >= TAP_GAP_MS;
-  down.add(e.pointerId); lastTap = e.timeStamp;
-  if (clean) cur.tap(...pos(e));
-  if (cur !== scenes.sleep) att.tap(...pos(e));
-});
-for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) cv.addEventListener(ev, (e) => down.delete(e.pointerId));
+// Every touch reacts, also slaps and swipes with the whole hand (user 2026-11-24: the baby slaps/swipes on purpose to hear sounds).
+cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!playing()) return; audio.init(); cur.tap(...pos(e)); if (cur !== scenes.sleep) att.tap(...pos(e)); });
 // iOS counts touchend/click as a user gesture for audio, not pointerdown -> also unlock audio there.
 for (const ev of ['touchend', 'click']) addEventListener(ev, () => { audio.init(); audio.unlockSpeech(); }, { capture: true, passive: true });
-cv.addEventListener('pointermove', (e) => { if (playing() && e.buttons && down.size <= 1) cur.drag(...pos(e)); });
+cv.addEventListener('pointermove', (e) => { if (playing() && e.buttons) cur.drag(...pos(e)); });
 
 const ARC = 276.5;
 let last = performance.now(), fpsAcc = 0, fpsN = 0;
