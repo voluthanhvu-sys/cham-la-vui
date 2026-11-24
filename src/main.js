@@ -1,5 +1,5 @@
 // Chạm Là Vui: tap game for ~1-year-olds. Scenes rotate automatically; session ends with a sleep screen.
-// URL params: ?min=10 (session minutes), ?scene=60 (seconds per game), ?game=fish (start with that game),
+// URL params: ?min=10 (session minutes), ?scene=25 (seconds per v2 event game), ?game=fish (start with that game),
 //   ?dev (fps readout; key "u" toggles a fake 5-finger hold for headless tests)
 import { createAudio } from './audio.js';
 import { createLock } from './lock.js';
@@ -7,7 +7,7 @@ import { makeScenes } from './scenes.js';
 import { createAttention, ACTIVE_SEC } from './attention.js';
 
 const q = new URLSearchParams(location.search);
-const SESSION_SEC = (+q.get('min') || 10) * 60, SCENE_SEC = +q.get('scene') || 60, DEV = q.has('dev');
+const SESSION_SEC = (+q.get('min') || 10) * 60, SCENE_SEC = +q.get('scene') || 25, DEV = q.has('dev');
 const REVEAL_SEC = 10; // padlock stays visible this long after the parent gesture
 const $ = (id) => document.getElementById(id);
 const cv = $('c'), ctx = cv.getContext('2d');
@@ -22,14 +22,22 @@ const NAMES = new Set(scenes.play.map((e) => e.name));
 seen = new Set([...seen].filter((n) => NAMES.has(n))); // drop names of games that no longer exist
 const built = new Map();
 function build(e) { let s = built.get(e.name); if (!s) { s = e.make(); s.name = e.name; built.set(e.name, s); } return s; }
+// v3: surprise rounds are the main play; every 2-3 rounds one v2 game runs as a short event (SCENE_SEC).
+const ROUNDS = scenes.play.filter((e) => e.surprise), EVENTS = scenes.play.filter((e) => !e.surprise);
+let roundsDone = 0, eventAt = 2 + (Math.random() * 2 | 0);
 function markSeen(s) {
   if (!NAMES.has(s.name)) return;
-  seen.add(s.name); if (seen.size >= NAMES.size) seen = new Set([s.name]); // full round done -> all eligible again (except this one)
+  seen.add(s.name);
+  const pool = ROUNDS.some((e) => e.name === s.name) ? ROUNDS : EVENTS;
+  if (pool.every((e) => seen.has(e.name))) for (const e of pool) if (e.name !== s.name) seen.delete(e.name); // pool done -> eligible again
   try { localStorage.setItem(SEEN_KEY, JSON.stringify([...seen])); } catch { /* */ }
 }
 function pickNext(prev) {
-  let pool = scenes.play.filter((e) => !seen.has(e.name) && e.name !== prev?.name);
-  if (!pool.length) pool = scenes.play.filter((e) => e.name !== prev?.name);
+  const ev = EVENTS.length && roundsDone >= eventAt;
+  if (ev) { roundsDone = 0; eventAt = 2 + (Math.random() * 2 | 0); } else roundsDone++;
+  const list = ev ? EVENTS : ROUNDS;
+  let pool = list.filter((e) => !seen.has(e.name) && e.name !== prev?.name);
+  if (!pool.length) pool = list.filter((e) => e.name !== prev?.name);
   return build(pool[Math.random() * pool.length | 0]);
 }
 const want = q.get('game'), wantE = want && (scenes.play.find((e) => e.name === want) || scenes.play.find((e) => e.name.startsWith(want + '.')));
@@ -123,6 +131,7 @@ function frame(now) {
       if (sessionT >= SESSION_SEC) setScene(scenes.sleep);
       // Normal game time is SCENE_SEC, but a game the child is busy tapping may run up to twice as long.
       else if (att.update(dt)) nextGame(); // nobody tapped after the call-back animal -> try another game
+      else if (cur.selfPaced) { if (sceneT > 180) nextGame(); } // a surprise round ends itself (skip) a few seconds after the last reveal
       else if (sceneT >= SCENE_SEC && (att.idle >= ACTIVE_SEC || sceneT >= SCENE_SEC * 2)) nextGame();
     }
   }

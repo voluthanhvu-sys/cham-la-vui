@@ -4,6 +4,7 @@
 import { TAU, rnd, makeParticles } from './fx.js';
 import { tapGames } from './games4.js';
 import { deviceGames } from './games5.js';
+import { surpriseGames } from './surprise.js';
 
 export const grad = (ctx, W, H, a, b) => { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, a); g.addColorStop(1, b); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
 // End of session: calm night, lullaby; taps only make soft twinkles.
@@ -37,7 +38,7 @@ function sleepScene(audio) {
 // One entry per variant: {name: 'mech.theme', make()}; main.js builds a scene the first time it is played.
 export const variants = (audio, mech, factory, themes) => Object.entries(themes).map(([k, th]) => ({ name: `${mech}.${k}`, make: () => factory(audio, th) }));
 export function makeScenes(audio) {
-  // Baby v2 (2026-11-18): the old 100 games (bloom/peek/bubbles + games2/games3) were replaced by 7 new mechanics.
-  const play = [...tapGames(audio), ...deviceGames(audio)];
+  // Baby v3 (2026-11-24): generative surprise rounds (surprise: true) are the main play; the 7 v2 mechanics are short events.
+  const play = [...surpriseGames(audio), ...tapGames(audio), ...deviceGames(audio)];
   return { play, sleep: sleepScene(audio) };
 }
