@@ -80,25 +80,39 @@ export function createAudio() {
   // Song for the coconut games and the call-back: the parent's own audio file (kept on this device, see main.js)
   // or, without a file, a built-in ORIGINAL bouncy tune. Every tap plays the next bit; the song pauses when taps stop.
   let songBuf = null, songBytes = null, songPos = 0, songNode = null, songGain = null, songStart = 0, songFrom = 0, songUntil = 0, tunePos = 0;
-  // Pre-made voice clips (made with the Nubia's Vietnamese TTS): play through WebAudio, which works on iPhone
-  // when Safari's speechSynthesis stays silent (no gesture / no Vietnamese voice). Missing file = speech fallback.
+  // Pre-made voice clips play through WebAudio, which works on iPhone when Safari's speechSynthesis
+  // stays silent (no gesture / no Vietnamese voice). Missing file = speech fallback.
   const clips = {};
   let defBuf = null;
   function loadClips() {
     // Default song (made with Suno for this app): one of two, picked per visit; a parent's own file wins.
     fetch(`sounds/song${1 + (Math.random() * 2 | 0)}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : null))
       .then((b) => b && ac.decodeAudioData(b)).then((buf) => { if (buf) defBuf = buf; }).catch(() => {});
-    for (const name of ['call']) {
-      fetch(`sounds/${name}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : null))
-        .then((b) => b && ac.decodeAudioData(b)).then((buf) => { if (buf) clips[name] = buf; }).catch(() => {});
-    }
+    // Voice lines made with ai33 (natural voice): manifest maps the spoken text -> sounds/v/<file>.mp3.
+    fetch('sounds/v/manifest.json').then((r) => (r.ok ? r.json() : {})).then((m) => {
+      for (const [text, file] of Object.entries(m)) {
+        fetch(`sounds/v/${file}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : null))
+          .then((b) => b && ac.decodeAudioData(b)).then((buf) => { if (buf) clips[text] = buf; }).catch(() => {});
+      }
+    }).catch(() => {});
   }
-  function clip(name, delay = 0) {
-    const buf = clips[name];
+  // ONE voice at a time (user bug 2026-11-24: random taps made speech repeat nonstop). A line asked for while
+  // another is playing is DROPPED (never queued, never cut), and the same line waits REPEAT_SEC before it can come back.
+  const GAP_SEC = 0.5, REPEAT_SEC = 5;
+  let voiceUntil = 0;
+  const lastSaid = {};
+  const nowSec = () => performance.now() / 1000;
+  function voiceFree(text) {
+    const t = nowSec();
+    return t >= voiceUntil && !(t - (lastSaid[text] ?? -99) < REPEAT_SEC);
+  }
+  function clip(text) {
+    const buf = clips[text];
     if (!buf || !ac) return false;
     const src = ac.createBufferSource(), g = ac.createGain();
-    src.buffer = buf; g.gain.value = 1.4; src.connect(g); g.connect(ac.destination);
-    src.start(ac.currentTime + delay / 1000);
+    src.buffer = buf; g.gain.value = 1.3; src.connect(g); g.connect(ac.destination);
+    src.start();
+    voiceUntil = nowSec() + buf.duration + GAP_SEC;
     return true;
   }
 
@@ -152,7 +166,6 @@ export function createAudio() {
     giggle() { for (let i = 0; i < 5; i++) tone(0, 0.11, { type: 'triangle', curve: [1000 - i * 60, 1300 - i * 60, 900 - i * 60], vol: 0.18, at: i * 0.12 }); },
     boing() { tone(0, 0.45, { curve: [220, 620, 320, 520, 280], vol: 0.25 }); },
     unlockSpeech,
-    clip,
     note(i, at = 0) { const f = SCALE[((i % SCALE.length) + SCALE.length) % SCALE.length]; tone(f, 0.7, { type: 'triangle', vol: 0.3, at }); tone(f * 2, 0.35, { vol: 0.06, at }); },
     pop() { tone(320 + Math.random() * 260, 0.14, { slide: 3, vol: 0.4 }); noise(0.05, { vol: 0.12, freq: 3200 }); },
     twinkle() { tone(SCALE[4 + (Math.random() * 4 | 0)] * 2, 0.25, { vol: 0.07 }); },
@@ -167,12 +180,17 @@ export function createAudio() {
       const f = [261.63, 293.66, 329.63, 349.23, 392, 440];
       m.forEach((n, i) => { if (n >= 0) tone(f[n], 0.9, { type: 'sine', vol: 0.18, at: 0.3 + i * 0.55, attack: 0.05 }); });
     },
+    // Speak a line after delay ms: pre-made ai33 clip if there is one, else native/browser TTS. Dropped if busy.
     say(text, delay = 0) {
-      const nat = window.BabyNative;
-      if (nat?.say) { setTimeout(() => nat.say(text), delay); return; } // Android shell: native TTS
-      const ss = window.speechSynthesis;
-      if (!ss) return;
-      const go = () => {
+      setTimeout(() => {
+        if (!voiceFree(text)) return;
+        lastSaid[text] = nowSec();
+        if (clip(text)) return;
+        voiceUntil = nowSec() + 0.8 + text.length * 0.09 + GAP_SEC; // TTS has no reliable end event: estimate
+        const nat = window.BabyNative;
+        if (nat?.say) { nat.say(text); return; } // Android shell: native TTS
+        const ss = window.speechSynthesis;
+        if (!ss) return;
         if (!viVoice) pickVoice();
         // iPhone often returns an empty voice list and no voiceschanged: lang alone selects its Vietnamese voice.
         // A loaded list without Vietnamese = stay silent rather than read Vietnamese with a foreign voice.
@@ -182,9 +200,6 @@ export function createAudio() {
         u.lang = viVoice?.lang || 'vi-VN'; u.rate = 0.85; u.pitch = 1.3;
         lastUtter = u; // Safari drops utterances that get garbage-collected while waiting
         ss.resume?.(); ss.speak(u);
-      };
-      setTimeout(() => {
-        if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(go, 80); } else go(); // Safari loses a speak() right after cancel()
       }, delay);
     },
   };

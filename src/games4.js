@@ -191,7 +191,7 @@ function feedScene(audio, th) {
       ctx.save(); if (swapT > 1.6) { ctx.translate(W / 2, ay); const k = 1 + (swapT - 1.6) * 0.15; ctx.scale(k, k); ctx.translate(-W / 2, -ay); }
       if (r > 1) drawAnimal(ctx, kind, W / 2, ay, r, t);
       const open = flying.length ? 0.9 : chew > 0 ? Math.abs(Math.sin(chew * 12)) : 0;
-      if (open > 0.05) { ctx.fillStyle = '#7a2b2b'; ctx.beginPath(); ctx.ellipse(mx, my + r * 0.05, r * 0.22, r * 0.18 * open, 0, 0, TAU); ctx.fill(); }
+      if (open > 0.05 && r > 1) { ctx.fillStyle = '#7a2b2b'; ctx.beginPath(); ctx.ellipse(mx, my + r * 0.05, r * 0.22, r * 0.18 * open, 0, 0, TAU); ctx.fill(); }
       ctx.restore();
       for (const f of flying) {
         const k = f.k, x = f.x0 + (mx - f.x0) * k, y = f.y0 + (my - f.y0) * k - Math.sin(k * Math.PI) * S * 0.2;
