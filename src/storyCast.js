@@ -151,13 +151,19 @@ Object.assign(DRAW, {
     head(c, p, 0.1, -2.05, t, () => { c.fillStyle = '#9c5a36'; ell(c, 0, 0, 0.78, 0.68); c.fillStyle = '#6f3c22'; for (const d of [-1, 1]) ell(c, d * 0.74, 0.05 + Math.abs(sw) * 0.1, 0.22, 0.5, d * -0.25); c.fillStyle = '#f3dcc0'; ell(c, 0.18, 0.28, 0.42, 0.3); eyes(c, p, [-0.2, 0.42], -0.08, 0.12, t); c.fillStyle = '#33241e'; ell(c, 0.2, 0.16, 0.13, 0.09); mouth(c, p, 0.2, 0.4, 0.18); });
     c.fillStyle = '#58b368'; box(c, -0.45, -1.55, 1.0, 0.18, 0.09);
   },
-  dino(c, p, sw, t) { // yellow baby dinosaur with teal back plates and spots
-    legs(c, sw, '#ffc933', '#f0a91c', 0.4, 0.55, 0.36);
-    c.fillStyle = '#ffc933'; poly(c, [[-0.4, -1.2], [-1.6, -0.35 + Math.sin(t * 5) * 0.12], [-0.2, -0.35]]);
-    c.fillStyle = '#35b5a6'; for (const [a, d] of [[-0.75, -1.6], [-0.95, -1.1], [-1.1, -0.7]]) poly(c, [[a + 0.3, d - 0.15], [a - 0.18, d - 0.22], [a + 0.25, d + 0.3]]);
-    c.fillStyle = '#ffc933'; ell(c, 0, -1.0, 0.8, 0.8); c.fillStyle = '#fff3c4'; ell(c, 0.2, -0.92, 0.5, 0.58); c.fillStyle = '#f0a91c'; for (const [a, d] of [[-0.5, -1.2], [-0.58, -0.8], [-0.36, -1.5]]) ell(c, a, d, 0.1, 0.1);
-    arms(c, p, sw, t, '#f0a91c', null, 0.55, -1.2, 0.38, 0.24);
-    head(c, p, 0.15, -2.05, t, () => { c.fillStyle = '#35b5a6'; for (const a of [-0.35, 0, 0.35]) poly(c, [[a - 0.17, -0.5], [a, -1.0], [a + 0.17, -0.5]]); c.fillStyle = '#ffc933'; ell(c, 0, 0, 0.76, 0.64); ell(c, 0.4, 0.18, 0.55, 0.42); eyes(c, p, [-0.12, 0.45], -0.15, 0.13, t); c.fillStyle = '#b87a10'; for (const a of [0.68, 0.84]) ell(c, a, 0.08, 0.04, 0.05); cheeks(c, [-0.3], 0.2, 0.15); mouth(c, p, 0.55, 0.36, 0.2); });
+  dino(c, p, sw, t) { // own design: chubby smooth lemon dinosaur, long soft snout, leaf sprout on the head, dotted teal bib, curled tail
+    const j = Math.sin(t * 5) * 0.04 + Math.abs(sw) * 0.05, m = p.mouth || 0;
+    c.strokeStyle = '#f7d64a'; c.lineWidth = 0.42; c.beginPath(); c.moveTo(-0.7, -0.45); c.quadraticCurveTo(-1.5, -0.2, -1.6, -0.7 + Math.sin(t * 6) * 0.12); c.stroke();
+    legs(c, sw, '#f7d64a', '#eebf35', 0.5, 0.45, 0.42);
+    c.fillStyle = '#f7d64a'; ell(c, -0.02, -0.92, 1.2 + j, 0.9 - j); c.fillStyle = '#fff6d2'; ell(c, 0.18, -0.74, 0.8 + j, 0.62 - j);
+    arms(c, p, sw, t, '#eebf35', null, 0.9, -1.12, 0.26, 0.32);
+    head(c, p, 0.12, -2.14, t, () => {
+      c.save(); c.translate(-0.05, -0.68); c.rotate(Math.sin(t * 3) * 0.15); c.strokeStyle = '#5aa845'; c.lineWidth = 0.08; line(c, 0, 0.1, 0, -0.18); c.fillStyle = '#6cc252'; ell(c, -0.17, -0.27, 0.2, 0.11, 0.5); ell(c, 0.17, -0.27, 0.2, 0.11, -0.5); c.restore();
+      c.fillStyle = '#f7d64a'; ell(c, -0.05, -0.05, 0.78, 0.68); c.fillStyle = '#fbe27a'; ell(c, 0.42, 0.2, 0.6, 0.4);
+      eyes(c, p, [-0.2, 0.36], -0.2, 0.13, t); c.fillStyle = '#b98a22'; for (const d of [0.6, 0.8]) ell(c, d, 0.06, 0.04, 0.05); cheeks(c, [-0.42], 0.16, 0.18);
+      mouth(c, p, 0.45, 0.36, 0.28); if (m <= 0.15) { c.fillStyle = '#fff'; poly(c, [[0.33, 0.39], [0.47, 0.41], [0.4, 0.5]]); }
+    });
+    c.fillStyle = '#2fb3b0'; poly(c, [[-0.5, -1.5], [0.72, -1.5], [0.15, -1.02]]); c.fillStyle = '#fff'; for (const [x, y] of [[-0.15, -1.38], [0.35, -1.38], [0.12, -1.2]]) ell(c, x, y, 0.06, 0.06);
   },
 });
 export const SIZE = { to: 1, dad: 1.12, mom: 1.08, shark: 1.15, capy: 1.1, tart: 0.95, bamboo: 1.1, mosquito: 1, panda: 1.05, puppy: 1, dino: 1.05 };
