@@ -29,28 +29,22 @@ export function drawProp(c, type, x, y, s, t, o) {
 
 const hill = (c, W, H, y, amp, len, off) => { c.beginPath(); c.moveTo(0, H); for (let x = 0; x <= W + 20; x += 20) c.lineTo(x, y + Math.sin((x + off) / len) * amp + Math.sin((x + off) / len * 0.43) * amp * 0.6); c.lineTo(W + 20, H); c.fill(); };
 // Scrolling scenery. cam = camera x, night 0..1, rain 0..1
-export function drawWorld(c, place, W, H, S, gy, cam, t, night, rain) {
-  const sky = { garden: ['#8fdcff', '#e6fbff'], beach: ['#6fcfff', '#fff3cf'], home: ['#ffd9b8', '#fff1e0'] }[place];
-  const g = c.createLinearGradient(0, 0, 0, gy); g.addColorStop(0, sky[0]); g.addColorStop(1, sky[1]); c.fillStyle = g; c.fillRect(0, 0, W, H);
-  if (place !== 'home') {
-    c.fillStyle = '#ffd23f'; ell(c, W * 0.5, gy * 0.3 + Math.sin(t * 0.5) * 6, S * 0.08, S * 0.08);
-    c.fillStyle = 'rgba(255,255,255,.9)';
-    for (let i = 0; i < 5; i++) { const span = W * 1.4, x = ((i * 0.31 * W + t * 14 - cam * 0.15) % span + span) % span - W * 0.2, y = gy * (0.15 + (i % 3) * 0.17); for (const [a, r] of [[-0.07, 0.04], [0, 0.06], [0.07, 0.045]]) ell(c, x + a * S, y, r * S * 1.2, r * S); }
+export function drawScene(c, d, W, H, S, gy, cam, t, rain, worldW, sprite) {
+  const g = c.createLinearGradient(0, 0, 0, d.swim ? H : gy); g.addColorStop(0, d.sky[0]); g.addColorStop(1, d.sky[1]); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  if (d.indoor) { const st = S * 0.16; c.strokeStyle = d.indoor; c.globalAlpha = 0.35; c.lineWidth = S * 0.04; for (let i = 0; i * st < W + st * 2; i++) { const x = i * st - ((cam * 0.5) % st); line(c, x, 0, x, gy); } c.globalAlpha = 1; }
+  else if (d.dark) { c.fillStyle = '#fff3b0'; for (let i = 0; i < 26; i++) drawStar(c, (i * 137.5) % W, (i * 71.3) % (gy * 0.9), S * 0.009 * (1.4 + Math.sin(t * 3 + i)), i); }
+  else if (!d.swim) {
+    if (!rain) { c.fillStyle = '#ffd23f'; ell(c, W * 0.85, gy * 0.22 + Math.sin(t * 0.5) * 6, S * 0.07, S * 0.07); }
+    c.fillStyle = 'rgba(255,255,255,.85)';
+    for (let i = 0; i < 4; i++) { const span = W * 1.4, x = ((i * 0.37 * W + t * 14 - cam * 0.15) % span + span) % span - W * 0.2, y = gy * (0.12 + (i % 3) * 0.14); for (const [a, r] of [[-0.07, 0.04], [0, 0.06], [0.07, 0.045]]) ell(c, x + a * S, y, r * S * 1.2, r * S); }
   }
-  if (place === 'garden') {
-    c.fillStyle = '#a9dd8c'; hill(c, W, H, gy - S * 0.12, S * 0.07, 170, cam * 0.3); c.fillStyle = '#86ca6b'; hill(c, W, H, gy - S * 0.04, S * 0.05, 120, cam * 0.6);
-    const step = S * 0.5; for (let i = 0; i * step < W + step * 2; i++) { const x = i * step - ((cam * 0.6) % step); c.fillStyle = '#8a5c38'; c.fillRect(x - S * 0.02, gy - S * 0.2, S * 0.04, S * 0.22); c.fillStyle = '#4ea64f'; ell(c, x + Math.sin(t + i) * 3, gy - S * 0.28, S * 0.13, S * 0.14); }
-    c.fillStyle = '#74c25a'; c.fillRect(0, gy, W, H - gy);
-  } else if (place === 'beach') {
-    c.fillStyle = '#39b3e6'; c.fillRect(0, gy - S * 0.22, W, S * 0.3);
-    c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 3; for (let r = 0; r < 4; r++) { c.beginPath(); for (let x = 0; x <= W + 12; x += 12) c.lineTo(x, gy - S * 0.18 + r * S * 0.05 + Math.sin((x + cam * 0.5) / 40 + t * 2 + r * 2) * 4); c.stroke(); }
-    c.fillStyle = '#f5dc9a'; hill(c, W, H, gy + 4, 6, 90, cam);
-  } else {
-    const st = S * 0.16; c.strokeStyle = 'rgba(255,160,120,.35)'; c.lineWidth = S * 0.03; for (let i = 0; i * st < W + st * 2; i++) { const x = i * st - ((cam * 0.5) % st); line(c, x, 0, x, gy); }
-    const gap = S * 0.9, w = S * 0.16; for (let i = 0; i * gap < W + gap * 2; i++) { const x = i * gap + gap * 0.5 - ((cam * 0.5) % gap); c.fillStyle = '#fff'; box(c, x - w * 1.1, gy * 0.22, w * 2.2, w * 2.2, 8); c.fillStyle = night > 0.5 ? '#26356b' : '#9fdcff'; c.fillRect(x - w, gy * 0.22 + w * 0.1, w * 2, w * 2); c.fillStyle = '#fff'; c.fillRect(x - 3, gy * 0.22, 6, w * 2.2); }
-    c.fillStyle = '#d9a66f'; c.fillRect(0, gy, W, H - gy); c.strokeStyle = 'rgba(110,60,20,.16)'; c.lineWidth = 2; for (let y = gy + S * 0.08; y < H; y += S * 0.1) line(c, 0, y, W, y);
-  }
-  if (rain > 0) { c.globalAlpha = Math.min(1, rain) * 0.7; c.strokeStyle = '#5aa9e6'; c.lineWidth = 3; for (let i = 0; i < 50; i++) { const x = (i * 97.3 + t * 60) % W, y = (i * 61.7 + t * 620) % H; line(c, x, y, x - 4, y + S * 0.04); } c.globalAlpha = 1; }
+  if (d.sea) { c.fillStyle = '#39b3e6'; c.fillRect(0, gy - S * 0.16, W, S * 0.2); }
+  const step = S * 0.36, size = S * (d.indoor ? 0.15 : 0.24), top = d.indoor ? gy * 0.32 : d.swim ? H * 0.88 - size * 0.4 : gy - size * 0.42;
+  if (d.deco.length) for (let i = 0; i * step < W + step * 3; i++) { const n = i + Math.floor(cam * 0.5 / step), x = i * step - ((cam * 0.5) % step); sprite(c, d.deco[n % d.deco.length], x, top, size * (0.85 + (n * 7 % 4) * 0.1), { rot: Math.sin(t + n) * 0.03 }); }
+  c.fillStyle = d.ground; if (d.swim) c.fillRect(0, H * 0.93, W, H * 0.07); else { c.fillRect(0, gy, W, H - gy); c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(0, gy, W, S * 0.02); }
+  if (d.sign) { const w = S * (0.1 + d.sign.length * 0.036), x = worldW * 0.5 - cam * 0.8 - worldW * 0.1 - w / 2, y = gy * 0.1; c.fillStyle = '#e03131'; box(c, x, y, w, S * 0.1, 10); c.fillStyle = '#fff'; c.font = `bold ${Math.round(S * 0.05)}px system-ui`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(d.sign, x + w / 2, y + S * 0.052); c.textAlign = 'start'; c.textBaseline = 'alphabetic'; }
+  if (rain > 0) { c.globalAlpha = 0.6; c.strokeStyle = '#5aa9e6'; c.lineWidth = 3; for (let i = 0; i < 50; i++) { const x = (i * 97.3 + t * 60) % W, y = (i * 61.7 + t * 620) % H; line(c, x, y, x - 4, y + S * 0.04); } c.globalAlpha = 1; }
+  if (d.snowing) { c.fillStyle = '#fff'; for (let i = 0; i < 40; i++) ell(c, (i * 97.3 + Math.sin(t + i) * 20 + 9999 - cam * 0.3) % W, (i * 61.7 + t * 50) % H, S * 0.008, S * 0.008); }
 }
 export function drawNight(c, W, H, S, gy, t, n) {
   if (n <= 0.01) return;

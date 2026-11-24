@@ -7,7 +7,7 @@ export const ell = (c, x, y, rx, ry, rot = 0) => { c.beginPath(); c.ellipse(x, y
 const line = (c, x1, y1, x2, y2) => { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); };
 const box = (c, x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); c.fill(); };
 const poly = (c, pts) => { c.beginPath(); for (const [x, y] of pts) c.lineTo(x, y); c.closePath(); c.fill(); };
-const INK = '#33241e', SKIN = '#ffdcc0', HAIR = '#2b211f';
+const INK = '#33241e', SKIN = '#ffdcc0'; let HAIR = '#2b211f'; // grey while the grandparents are drawn
 // All shapes below are in units of s (the context is scaled by s).
 
 function eyes(c, p, xs, y, r, t) {
@@ -175,7 +175,8 @@ export function drawChar(c, kind, x, y, s, p) {
   if (p.rot) { c.translate(0, -1.2); c.rotate(p.rot); c.translate(0, 1.2); }
   if (p.sleep && kind !== 'mom' && kind !== 'dad') { c.translate(1, -0.7); c.rotate(-1.35); }
   c.translate(0, -Math.abs(sw) * 0.14);
-  (DRAW[kind] || DRAW.to)(c, p, sw, t);
+  const old = kind === 'gpa' || kind === 'gma'; if (old) HAIR = '#c9c9d2';
+  (DRAW[old ? (kind === 'gpa' ? 'dad' : 'mom') : kind] || DRAW.to)(c, p, sw, t); HAIR = '#2b211f';
   if (p.mud > 0.05) { c.globalAlpha = Math.min(1, p.mud); c.fillStyle = '#7a4d2b'; for (const [a, d, r] of [[-0.35, -1.2, 0.2], [0.3, -0.7, 0.22], [-0.1, -0.5, 0.17], [0.4, -1.4, 0.13], [0.58, -1.85, 0.12], [-0.6, -2.35, 0.1]]) if (kind === 'to' || d > -1.7) ell(c, a, d, r, r * 0.8); c.globalAlpha = 1; }
   c.restore();
 }
