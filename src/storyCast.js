@@ -113,10 +113,12 @@ const DRAW = {
   },
   bamboo(c, p, sw, t) {
     c.save(); c.transform(1, 0, Math.sin(t * 2.2) * 0.05 + sw * 0.08, 1, 0, 0);
-    c.fillStyle = '#f6e3a0'; box(c, -0.58, -3.3, 1.16, 3.25, 0.56); c.fillStyle = '#eed68a'; box(c, -0.58, -3.3, 0.25, 3.25, 0.2);
+    c.fillStyle = '#f6e3a0'; box(c, -0.58, -3.3, 1.16, 3.25, 0.56);
     c.strokeStyle = '#6f9f3f'; c.lineWidth = 0.1; for (const y of [-2.05, -0.95]) line(c, -0.6, y, 0.6, y);
     c.fillStyle = '#7db24a'; c.save(); c.translate(0.58, -0.95); c.rotate(0.5 + Math.sin(t * 4) * 0.2 - (p.arms || 0) * 1.5); ell(c, 0.3, 0.05, 0.34, 0.11); c.restore(); c.save(); c.translate(-0.58, -2.05); c.rotate(2.2 + Math.sin(t * 4) * 0.2 + (p.arms || 0) * 1.5); ell(c, 0.3, 0, 0.34, 0.11); c.restore();
-    c.fillStyle = 'rgba(255,90,150,.55)'; for (const d of [-0.38, 0.4]) ell(c, d, -2.5, 0.11, 0.08); eyes(c, p, [-0.22, 0.26], -2.72, 0.08, t); mouth(c, { mouth: 0.5 }, 0.02, -2.45, 0.2);
+    c.fillStyle = 'rgba(255,90,150,.55)'; for (const d of [-0.38, 0.4]) ell(c, d, -2.5, 0.11, 0.08); eyes(c, p, [-0.22, 0.26], -2.72, 0.08, t); 
+    const o = 0.13 + (p.mouth || 0) * 0.1; c.strokeStyle = '#6b4630'; c.lineWidth = 0.06; c.beginPath(); c.moveTo(-0.2, -2.5); c.quadraticCurveTo(0.02, -2.56, 0.24, -2.5); c.quadraticCurveTo(0.3, -2.5 + o * 1.9, 0.02, -2.5 + o * 2); c.quadraticCurveTo(-0.26, -2.5 + o * 1.9, -0.2, -2.5); c.closePath(); c.fillStyle = '#fff3d0'; c.fill(); c.stroke();
+    c.save(); c.scale(p.dir || 1, 1); c.fillStyle = '#7f9f52'; c.font = 'bold 0.23px sans-serif'; c.textAlign = 'center'; c.fillText('BAMBOO', 0, -1.42); c.restore(); // never mirrored
     c.restore();
   },
   // plush mosquito: round furry head, orange proboscis, white wings, brown tail, black legs
