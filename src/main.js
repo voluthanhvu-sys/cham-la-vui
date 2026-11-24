@@ -38,10 +38,12 @@ function pickNext(prev) {
   const list = ev ? EVENTS : ROUNDS;
   let pool = list.filter((e) => !seen.has(e.name) && e.name !== prev?.name);
   if (!pool.length) pool = list.filter((e) => e.name !== prev?.name);
-  return build(pool[Math.random() * pool.length | 0]);
+  return build(pool.length ? pool[Math.random() * pool.length | 0] : scenes.play[0]);
 }
 const want = q.get('game'), wantE = want && (scenes.play.find((e) => e.name === want) || scenes.play.find((e) => e.name.startsWith(want + '.')));
-const first = wantE ? build(wantE) : pickNext(null);
+// Default = the story (user 2026-11-24: the old tap format bored the child). Older games only with ?game=<name>.
+const story = { name: 'story', make: scenes.story };
+const first = wantE ? build(wantE) : build(story);
 let W = 1, H = 1, cur = first, sceneT = 0, sessionT = 0, fade = 0;
 // iPhone keeps the status bar strip outside the page and paints it with theme-color: match it to the top of the current game.
 // Once per game and iPhone only (repeated getImageData can push Chrome canvases off the GPU).
@@ -130,8 +132,8 @@ function frame(now) {
     if (cur !== scenes.sleep) {
       if (sessionT >= SESSION_SEC) setScene(scenes.sleep);
       // Normal game time is SCENE_SEC, but a game the child is busy tapping may run up to twice as long.
-      else if (att.update(dt)) nextGame(); // nobody tapped after the call-back animal -> try another game
-      else if (cur.selfPaced) { if (sceneT > 180) nextGame(); } // a surprise round ends itself (skip) a few seconds after the last reveal
+      else if (att.update(dt, cur.ownIdle)) nextGame(); // nobody tapped after the call-back animal -> try another game
+      else if (cur.selfPaced) { if (!cur.ownIdle && sceneT > 180) nextGame(); } // a surprise round ends itself (skip) a few seconds after the last reveal
       else if (sceneT >= SCENE_SEC && (att.idle >= ACTIVE_SEC || sceneT >= SCENE_SEC * 2)) nextGame();
     }
   }

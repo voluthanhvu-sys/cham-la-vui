@@ -4,6 +4,7 @@
 import { TAU, rnd, makeParticles } from './fx.js';
 import { tapGames } from './games4.js';
 import { deviceGames } from './games5.js';
+import { storyGame } from './story.js';
 import { surpriseGames } from './surprise.js';
 
 export const grad = (ctx, W, H, a, b) => { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, a); g.addColorStop(1, b); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
@@ -40,5 +41,5 @@ export const variants = (audio, mech, factory, themes) => Object.entries(themes)
 export function makeScenes(audio) {
   // Baby v3 (2026-11-24): generative surprise rounds (surprise: true) are the main play; the 7 v2 mechanics are short events.
   const play = [...surpriseGames(audio), ...tapGames(audio), ...deviceGames(audio)];
-  return { play, sleep: sleepScene(audio) };
+  return { play, story: () => storyGame(audio), sleep: sleepScene(audio) };
 }

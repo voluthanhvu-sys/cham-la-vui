@@ -23,9 +23,10 @@ export function createAttention(audio) {
       parts.burst(x, y, 10, S * 0.025, COLORS, S * 0.7);
     },
     // Returns true when the game should be switched because nobody is tapping.
-    update(dt) {
+    update(dt, quiet = false) { // quiet: the scene has its own call-back (story), only tap effects here
       t += dt; idle += dt; parts.update(dt, 200);
       for (let i = rings.length - 1; i >= 0; i--) if ((rings[i].t += dt) > 0.6) rings.splice(i, 1);
+      if (quiet) { pop = null; return false; }
       if (!called && idle >= CALL_SEC) {
         called = true;
         const kind = bagFor('all').next();

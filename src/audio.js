@@ -168,6 +168,8 @@ export function createAudio() {
     unlockSpeech,
     note(i, at = 0) { const f = SCALE[((i % SCALE.length) + SCALE.length) % SCALE.length]; tone(f, 0.7, { type: 'triangle', vol: 0.3, at }); tone(f * 2, 0.35, { vol: 0.06, at }); },
     pop() { tone(320 + Math.random() * 260, 0.14, { slide: 3, vol: 0.4 }); noise(0.05, { vol: 0.12, freq: 3200 }); },
+    get voiceBusy() { return nowSec() < voiceUntil; },
+    soft(i) { tone(392 * 2 ** (i / 12), 0.9, { vol: 0.045, attack: 0.03 }); }, // quiet background music note
     twinkle() { tone(SCALE[4 + (Math.random() * 4 | 0)] * 2, 0.25, { vol: 0.07 }); },
     rustle() { noise(0.35, { vol: 0.12, freq: 2500, q: 0.7 }); },
     whoosh() { noise(0.4, { vol: 0.1, freq: 600, q: 0.5 }); },
